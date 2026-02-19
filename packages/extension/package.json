@@ -1,6 +1,6 @@
 {
   "name": "@skillkit/extension",
-  "version": "1.19.1",
+  "version": "1.19.2",
   "private": true,
   "description": "Chrome extension to save any webpage as an AI agent skill",
   "type": "module",
