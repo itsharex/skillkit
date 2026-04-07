@@ -147,7 +147,7 @@ export class ManifestAddCommand extends Command {
     description: 'Specific skills to include (comma-separated)',
   });
 
-  agents = Option.String('--agents,-a', {
+  agents = Option.String('--agent,--agents,-a', {
     description: 'Target agents (comma-separated)',
   });
 

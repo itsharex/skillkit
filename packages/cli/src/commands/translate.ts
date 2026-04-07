@@ -1,7 +1,7 @@
 import { Command, Option } from 'clipanion';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join, basename, dirname } from 'node:path';
-import chalk from 'chalk';
+import { colors, warn, success } from '../onboarding/index.js';
 import {
   type AgentType,
   translateSkill,
@@ -102,15 +102,15 @@ export class TranslateCommand extends Command {
 
     // Validate target agent
     if (!this.to) {
-      console.error(chalk.red('Error: --to/-t target agent is required'));
-      console.log(chalk.gray('Use --list to see all supported agents'));
+      console.log(colors.muted('Error: --to/-t target agent is required'));
+      console.log(colors.muted('Use --list to see all supported agents'));
       return 1;
     }
 
     const targetAgent = this.to as AgentType;
     if (!getSupportedTranslationAgents().includes(targetAgent)) {
-      console.error(chalk.red(`Error: Unknown target agent "${this.to}"`));
-      console.log(chalk.gray('Use --list to see all supported agents'));
+      console.log(colors.muted(`Error: Unknown target agent "${this.to}"`));
+      console.log(colors.muted('Use --list to see all supported agents'));
       return 1;
     }
 
@@ -121,7 +121,7 @@ export class TranslateCommand extends Command {
 
     // Translate single skill
     if (!this.source) {
-      console.error(chalk.red('Error: Please specify a skill name or path, or use --all'));
+      console.log(colors.muted('Error: Please specify a skill name or path, or use --all'));
       return 1;
     }
 
@@ -132,7 +132,7 @@ export class TranslateCommand extends Command {
    * List all supported agents and their formats
    */
   private listAgents(): number {
-    console.log(chalk.bold('\nSupported Agents for Translation:\n'));
+    console.log(colors.bold('\nSupported Agents for Translation:\n'));
 
     const agents = getSupportedTranslationAgents();
     const adapters = getAllAdapters();
@@ -154,17 +154,17 @@ export class TranslateCommand extends Command {
     };
 
     for (const [format, formatAgents] of Object.entries(byFormat)) {
-      console.log(chalk.cyan(`  ${formatNames[format] || format}:`));
+      console.log(colors.cyan(`  ${formatNames[format] || format}:`));
       for (const agent of formatAgents) {
         const adapter = adapters.find(a => a.type === agent);
         const name = adapter?.name || agent;
-        console.log(`    ${chalk.green(agent.padEnd(16))} ${chalk.gray(name)}`);
+        console.log(`    ${colors.success(agent.padEnd(16))} ${colors.muted(name)}`);
       }
       console.log();
     }
 
-    console.log(chalk.gray('All formats can translate to any other format.'));
-    console.log(chalk.gray('Use --compat to see compatibility details.\n'));
+    console.log(colors.muted('All formats can translate to any other format.'));
+    console.log(colors.muted('Use --compat to see compatibility details.\n'));
 
     return 0;
   }
@@ -174,7 +174,7 @@ export class TranslateCommand extends Command {
    */
   private showCompatibility(): number {
     if (!this.from || !this.to) {
-      console.error(chalk.red('Error: Both --from and --to are required for compatibility check'));
+      console.log(colors.muted('Error: Both --from and --to are required for compatibility check'));
       return 1;
     }
 
@@ -183,26 +183,26 @@ export class TranslateCommand extends Command {
 
     const info = translatorRegistry.getCompatibilityInfo(fromAgent, toAgent);
 
-    console.log(chalk.bold(`\nTranslation: ${fromAgent} → ${toAgent}\n`));
+    console.log(colors.bold(`\nTranslation: ${fromAgent} → ${toAgent}\n`));
 
     if (info.supported) {
-      console.log(chalk.green('  ✓ Translation supported'));
+      console.log(colors.success('  ✓ Translation supported'));
     } else {
-      console.log(chalk.red('  ✗ Translation not supported'));
+      console.log(colors.error('  ✗ Translation not supported'));
       return 1;
     }
 
     if (info.warnings.length > 0) {
-      console.log(chalk.yellow('\n  Warnings:'));
+      warn('\n  Warnings:');
       for (const warning of info.warnings) {
-        console.log(chalk.yellow(`    • ${warning}`));
+        console.log(colors.warning(`    • ${warning}`));
       }
     }
 
     if (info.lossyFields.length > 0) {
-      console.log(chalk.gray('\n  Fields with reduced functionality:'));
+      console.log(colors.muted('\n  Fields with reduced functionality:'));
       for (const field of info.lossyFields) {
-        console.log(chalk.gray(`    • ${field}`));
+        console.log(colors.muted(`    • ${field}`));
       }
     }
 
@@ -218,19 +218,19 @@ export class TranslateCommand extends Command {
     const skills = findAllSkills(searchDirs);
 
     if (skills.length === 0) {
-      console.log(chalk.yellow('No skills found to translate'));
+      warn('No skills found to translate');
       return 0;
     }
 
-    console.log(chalk.bold(`\nTranslating ${skills.length} skill(s) to ${targetAgent}...\n`));
+    console.log(colors.bold(`\nTranslating ${skills.length} skill(s) to ${targetAgent}...\n`));
 
-    let success = 0;
+    let successCount = 0;
     let failed = 0;
 
     for (const skill of skills) {
       const skillMdPath = join(skill.path, 'SKILL.md');
       if (!existsSync(skillMdPath)) {
-        console.log(chalk.yellow(`  ⚠ ${skill.name}: No SKILL.md found`));
+        warn(`  ⚠ ${skill.name}: No SKILL.md found`);
         failed++;
         continue;
       }
@@ -241,10 +241,10 @@ export class TranslateCommand extends Command {
 
       if (result.success) {
         if (this.dryRun) {
-          console.log(chalk.green(`  ✓ ${skill.name} → ${result.filename} (dry run)`));
+          success(`  ✓ ${skill.name} → ${result.filename} (dry run)`);
           if (result.warnings.length > 0) {
             for (const warning of result.warnings) {
-              console.log(chalk.gray(`      ${warning}`));
+              console.log(colors.muted(`      ${warning}`));
             }
           }
         } else {
@@ -259,33 +259,33 @@ export class TranslateCommand extends Command {
           const outputPath = join(outputDir, result.filename);
 
           if (existsSync(outputPath) && !this.force) {
-            console.log(chalk.yellow(`  ⚠ ${skill.name}: ${outputPath} exists (use --force)`));
+            warn(`  ⚠ ${skill.name}: ${outputPath} exists (use --force)`);
             failed++;
             continue;
           }
 
           writeFileSync(outputPath, result.content, 'utf-8');
-          console.log(chalk.green(`  ✓ ${skill.name} → ${outputPath}`));
+          success(`  ✓ ${skill.name} → ${outputPath}`);
         }
 
         if (result.incompatible.length > 0) {
           for (const item of result.incompatible) {
-            console.log(chalk.gray(`      ⚠ ${item}`));
+            console.log(colors.muted(`      ⚠ ${item}`));
           }
         }
 
-        success++;
+        successCount++;
       } else {
-        console.log(chalk.red(`  ✗ ${skill.name}: Translation failed`));
+        console.log(colors.error(`  ✗ ${skill.name}: Translation failed`));
         for (const item of result.incompatible) {
-          console.log(chalk.red(`      ${item}`));
+          console.log(colors.error(`      ${item}`));
         }
         failed++;
       }
     }
 
     console.log();
-    console.log(chalk.bold(`Translated: ${success}, Failed: ${failed}`));
+    console.log(colors.bold(`Translated: ${successCount}, Failed: ${failed}`));
 
     return failed > 0 ? 1 : 0;
   }
@@ -322,10 +322,10 @@ export class TranslateCommand extends Command {
       }
 
       if (!found) {
-        console.error(chalk.red(`Error: Skill "${source}" not found`));
-        console.log(chalk.gray('Searched in:'));
+        console.log(colors.muted(`Error: Skill "${source}" not found`));
+        console.log(colors.muted('Searched in:'));
         for (const dir of searchDirs) {
-          console.log(chalk.gray(`  ${dir}`));
+          console.log(colors.muted(`  ${dir}`));
         }
         return 1;
       }
@@ -339,35 +339,35 @@ export class TranslateCommand extends Command {
     });
 
     if (!result.success) {
-      console.error(chalk.red('Translation failed:'));
+      console.log(colors.muted('Translation failed:'));
       for (const item of result.incompatible) {
-        console.error(chalk.red(`  ${item}`));
+        console.log(colors.muted(`  ${item}`));
       }
       return 1;
     }
 
     // Show warnings
     if (result.warnings.length > 0) {
-      console.log(chalk.yellow('\nWarnings:'));
+      warn('\nWarnings:');
       for (const warning of result.warnings) {
-        console.log(chalk.yellow(`  • ${warning}`));
+        console.log(colors.warning(`  • ${warning}`));
       }
     }
 
     // Show incompatible features
     if (result.incompatible.length > 0) {
-      console.log(chalk.gray('\nIncompatible features:'));
+      console.log(colors.muted('\nIncompatible features:'));
       for (const item of result.incompatible) {
-        console.log(chalk.gray(`  • ${item}`));
+        console.log(colors.muted(`  • ${item}`));
       }
     }
 
     // Dry run - just show preview
     if (this.dryRun) {
-      console.log(chalk.bold(`\nTranslated content (${result.filename}):\n`));
-      console.log(chalk.gray('─'.repeat(60)));
+      console.log(colors.bold(`\nTranslated content (${result.filename}):\n`));
+      console.log(colors.muted('─'.repeat(60)));
       console.log(result.content);
-      console.log(chalk.gray('─'.repeat(60)));
+      console.log(colors.muted('─'.repeat(60)));
       return 0;
     }
 
@@ -388,8 +388,8 @@ export class TranslateCommand extends Command {
 
     // Check for existing file
     if (existsSync(outputPath) && !this.force) {
-      console.error(chalk.red(`Error: ${outputPath} already exists`));
-      console.log(chalk.gray('Use --force to overwrite'));
+      console.log(colors.muted(`Error: ${outputPath} already exists`));
+      console.log(colors.muted('Use --force to overwrite'));
       return 1;
     }
 
@@ -401,9 +401,9 @@ export class TranslateCommand extends Command {
 
     writeFileSync(outputPath, result.content, 'utf-8');
 
-    console.log(chalk.green(`\n✓ Translated to ${outputPath}`));
-    console.log(chalk.gray(`  Format: ${result.targetFormat}`));
-    console.log(chalk.gray(`  Agent: ${result.targetAgent}`));
+    success(`\n✓ Translated to ${outputPath}`);
+    console.log(colors.muted(`  Format: ${result.targetFormat}`));
+    console.log(colors.muted(`  Agent: ${result.targetAgent}`));
 
     return 0;
   }

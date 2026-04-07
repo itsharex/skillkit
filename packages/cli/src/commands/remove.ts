@@ -1,6 +1,6 @@
 import { existsSync, rmSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import chalk from 'chalk';
+import { colors, warn, success, error } from '../onboarding/index.js';
 import { Command, Option } from 'clipanion';
 import { findSkill, AgentsMdParser, AgentsMdGenerator } from '@skillkit/core';
 import { getSearchDirs } from '../helpers.js';
@@ -32,22 +32,22 @@ export class RemoveCommand extends Command {
       const skill = findSkill(skillName, searchDirs);
 
       if (!skill) {
-        console.log(chalk.yellow(`Skill not found: ${skillName}`));
+        warn(`Skill not found: ${skillName}`);
         continue;
       }
 
       if (!existsSync(skill.path)) {
-        console.log(chalk.yellow(`Path not found: ${skill.path}`));
+        warn(`Path not found: ${skill.path}`);
         continue;
       }
 
       try {
         rmSync(skill.path, { recursive: true, force: true });
-        console.log(chalk.green(`Removed: ${skillName}`));
+        success(`Removed: ${skillName}`);
         removed++;
-      } catch (error) {
-        console.log(chalk.red(`Failed to remove: ${skillName}`));
-        console.error(chalk.dim(error instanceof Error ? error.message : String(error)));
+      } catch (err) {
+        error(`Failed to remove: ${skillName}`);
+        console.error(colors.muted(err instanceof Error ? err.message : String(err)));
         failed++;
       }
     }
@@ -65,11 +65,11 @@ export class RemoveCommand extends Command {
             writeFileSync(agentsMdPath, updated, 'utf-8');
           }
         }
-      } catch (error) {
-        console.log(chalk.yellow('Warning: Failed to update AGENTS.md'));
-        console.error(chalk.dim(error instanceof Error ? error.message : String(error)));
+      } catch (err) {
+        warn('Warning: Failed to update AGENTS.md');
+        console.error(colors.muted(err instanceof Error ? err.message : String(err)));
       }
-      console.log(chalk.dim('\nRun `skillkit sync` to update your agent config'));
+      console.log(colors.muted('\nRun `skillkit sync` to update your agent config'));
     }
 
     return failed > 0 ? 1 : 0;

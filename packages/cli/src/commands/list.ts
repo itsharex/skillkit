@@ -1,8 +1,7 @@
-import chalk from 'chalk';
 import { Command, Option } from 'clipanion';
 import { findAllSkills, evaluateSkillDirectory } from '@skillkit/core';
 import { getSearchDirs } from '../helpers.js';
-import { formatQualityBadge, colors } from '../onboarding/index.js';
+import { formatQualityBadge, colors, warn } from '../onboarding/index.js';
 
 export class ListCommand extends Command {
   static override paths = [['list'], ['ls'], ['l']];
@@ -65,18 +64,18 @@ export class ListCommand extends Command {
     }
 
     if (skills.length === 0) {
-      console.log(chalk.yellow('No skills installed'));
-      console.log(chalk.dim('Install skills with: skillkit install <source>'));
+      warn('No skills installed');
+      console.log(colors.muted('Install skills with: skillkit install <source>'));
       return 0;
     }
 
-    console.log(chalk.cyan(`Installed skills (${skills.length}):\n`));
+    console.log(colors.cyan(`Installed skills (${skills.length}):\n`));
 
     const projectSkills = skillsWithQuality.filter(s => s.location === 'project');
     const globalSkills = skillsWithQuality.filter(s => s.location === 'global');
 
     if (projectSkills.length > 0) {
-      console.log(chalk.blue('Project skills:'));
+      console.log(colors.info('Project skills:'));
       for (const skill of projectSkills) {
         printSkill(skill, this.quality);
       }
@@ -84,7 +83,7 @@ export class ListCommand extends Command {
     }
 
     if (globalSkills.length > 0) {
-      console.log(chalk.dim('Global skills:'));
+      console.log(colors.muted('Global skills:'));
       for (const skill of globalSkills) {
         printSkill(skill, this.quality);
       }
@@ -95,7 +94,7 @@ export class ListCommand extends Command {
     const disabledCount = skills.length - enabledCount;
 
     console.log(
-      chalk.dim(
+      colors.muted(
         `${projectSkills.length} project, ${globalSkills.length} global` +
           (disabledCount > 0 ? `, ${disabledCount} disabled` : '')
       )
@@ -117,9 +116,9 @@ function printSkill(
   skill: { name: string; description: string; enabled: boolean; location: string; quality: number | null },
   showQuality = false
 ) {
-  const status = skill.enabled ? chalk.green('✓') : chalk.red('○');
-  const name = skill.enabled ? skill.name : chalk.dim(skill.name);
-  const desc = chalk.dim(truncate(skill.description, 50));
+  const status = skill.enabled ? colors.success('✓') : colors.error('○');
+  const name = skill.enabled ? skill.name : colors.muted(skill.name);
+  const desc = colors.muted(truncate(skill.description, 50));
   const qualityBadge = showQuality && skill.quality !== null ? ` ${formatQualityBadge(skill.quality)}` : '';
 
   console.log(`  ${status} ${name}${qualityBadge}`);

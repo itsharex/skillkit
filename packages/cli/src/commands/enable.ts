@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import { colors, warn, success as successLog, error as errorLog } from '../onboarding/index.js';
 import { Command, Option } from 'clipanion';
 import { setSkillEnabled, findSkill } from '@skillkit/core';
 import { getSearchDirs } from '../helpers.js';
@@ -25,29 +25,29 @@ export class EnableCommand extends Command {
       const skill = findSkill(skillName, searchDirs);
 
       if (!skill) {
-        console.log(chalk.red(`Skill not found: ${skillName}`));
+        errorLog(`Skill not found: ${skillName}`);
         failed++;
         continue;
       }
 
       if (skill.enabled) {
-        console.log(chalk.dim(`Already enabled: ${skillName}`));
+        console.log(colors.muted(`Already enabled: ${skillName}`));
         continue;
       }
 
       const result = setSkillEnabled(skill.path, true);
 
       if (result) {
-        console.log(chalk.green(`Enabled: ${skillName}`));
+        successLog(`Enabled: ${skillName}`);
         success++;
       } else {
-        console.log(chalk.red(`Failed to enable: ${skillName}`));
+        errorLog(`Failed to enable: ${skillName}`);
         failed++;
       }
     }
 
     if (success > 0) {
-      console.log(chalk.dim('\nRun `skillkit sync` to update your agent config'));
+      console.log(colors.muted('\nRun `skillkit sync` to update your agent config'));
     }
 
     return failed > 0 ? 1 : 0;
@@ -76,29 +76,29 @@ export class DisableCommand extends Command {
       const skill = findSkill(skillName, searchDirs);
 
       if (!skill) {
-        console.log(chalk.red(`Skill not found: ${skillName}`));
+        errorLog(`Skill not found: ${skillName}`);
         failed++;
         continue;
       }
 
       if (!skill.enabled) {
-        console.log(chalk.dim(`Already disabled: ${skillName}`));
+        console.log(colors.muted(`Already disabled: ${skillName}`));
         continue;
       }
 
       const result = setSkillEnabled(skill.path, false);
 
       if (result) {
-        console.log(chalk.yellow(`Disabled: ${skillName}`));
+        warn(`Disabled: ${skillName}`);
         success++;
       } else {
-        console.log(chalk.red(`Failed to disable: ${skillName}`));
+        errorLog(`Failed to disable: ${skillName}`);
         failed++;
       }
     }
 
     if (success > 0) {
-      console.log(chalk.dim('\nRun `skillkit sync` to update your agent config'));
+      console.log(colors.muted('\nRun `skillkit sync` to update your agent config'));
     }
 
     return failed > 0 ? 1 : 0;
