@@ -1,5 +1,5 @@
 import { Command, Option } from 'clipanion';
-import chalk from 'chalk';
+import { colors, error } from '../onboarding/index.js';
 
 export class MeshCommand extends Command {
   static override paths = [['mesh']];
@@ -72,8 +72,8 @@ export class MeshCommand extends Command {
       case 'peer':
         return this.handlePeer();
       default:
-        console.error(chalk.red(`Unknown action: ${action}`));
-        console.log(chalk.gray('Available actions: init, add, remove, list, health, discover, status, security, peer'));
+        error(`Unknown action: ${action}`);
+        console.log(colors.muted('Available actions: init, add, remove, list, health, discover, status, security, peer'));
         return 1;
     }
   }
@@ -86,10 +86,10 @@ export class MeshCommand extends Command {
       const localConfig = hostsFile.localHost;
       const localIP = getLocalIPAddress();
 
-      console.log(chalk.green('✓ Mesh network initialized\n'));
+      console.log(colors.success('✓ Mesh network initialized\n'));
 
-      console.log(chalk.bold('Local Host Configuration:'));
-      console.log(`  ID: ${chalk.cyan(localConfig.id.slice(0, 8))}`);
+      console.log(colors.bold('Local Host Configuration:'));
+      console.log(`  ID: ${colors.cyan(localConfig.id.slice(0, 8))}`);
       console.log(`  Name: ${localConfig.name}`);
       console.log(`  Address: ${localIP}:${localConfig.port}`);
 
@@ -102,20 +102,20 @@ export class MeshCommand extends Command {
       }
 
       console.log();
-      console.log(chalk.gray('Other hosts can connect to this machine using:'));
-      console.log(chalk.gray(`  skillkit mesh add ${localIP}:${localConfig.port}`));
+      console.log(colors.muted('Other hosts can connect to this machine using:'));
+      console.log(colors.muted(`  skillkit mesh add ${localIP}:${localConfig.port}`));
 
       return 0;
     } catch (err: any) {
-      console.error(chalk.red(`Failed to initialize mesh: ${err.message}`));
+      error(`Failed to initialize mesh: ${err.message}`);
       return 1;
     }
   }
 
   private async addHost(): Promise<number> {
     if (!this.arg) {
-      console.error(chalk.red('Error: Host address is required'));
-      console.log(chalk.gray('Usage: skillkit mesh add <address>[:port]'));
+      error('Error: Host address is required');
+      console.log(colors.muted('Usage: skillkit mesh add <address>[:port]'));
       return 1;
     }
 
@@ -127,7 +127,7 @@ export class MeshCommand extends Command {
       const portValue = portStr ?? this.port;
       const port = portValue ? Number(portValue) : DEFAULT_PORT;
       if (!Number.isInteger(port) || port < 1 || port > 65535) {
-        console.error(chalk.red(`Invalid port: ${portValue}`));
+        error(`Invalid port: ${portValue}`);
         return 1;
       }
 
@@ -142,23 +142,23 @@ export class MeshCommand extends Command {
 
       await addKnownHost(host);
 
-      console.log(chalk.green(`✓ Added host: ${host.name}`));
-      console.log(`  ID: ${chalk.gray(host.id.slice(0, 8))}`);
+      console.log(colors.success(`✓ Added host: ${host.name}`));
+      console.log(`  ID: ${colors.muted(host.id.slice(0, 8))}`);
       console.log(`  Address: ${host.address}:${host.port}`);
 
-      console.log(chalk.gray('\nRun "skillkit mesh health" to verify connectivity.'));
+      console.log(colors.muted('\nRun "skillkit mesh health" to verify connectivity.'));
 
       return 0;
     } catch (err: any) {
-      console.error(chalk.red(`Failed to add host: ${err.message}`));
+      error(`Failed to add host: ${err.message}`);
       return 1;
     }
   }
 
   private async removeHost(): Promise<number> {
     if (!this.arg) {
-      console.error(chalk.red('Error: Host ID is required'));
-      console.log(chalk.gray('Usage: skillkit mesh remove <hostId>'));
+      error('Error: Host ID is required');
+      console.log(colors.muted('Usage: skillkit mesh remove <hostId>'));
       return 1;
     }
 
@@ -169,22 +169,22 @@ export class MeshCommand extends Command {
       const host = hosts.find(h => h.id === this.arg || h.id.startsWith(this.arg!) || h.name === this.arg);
 
       if (!host) {
-        console.error(chalk.red(`Host not found: ${this.arg}`));
+        error(`Host not found: ${this.arg}`);
         return 1;
       }
 
       const removed = await removeKnownHost(host.id);
 
       if (removed) {
-        console.log(chalk.green(`✓ Removed host: ${host.name}`));
+        console.log(colors.success(`✓ Removed host: ${host.name}`));
       } else {
-        console.error(chalk.red('Failed to remove host'));
+        error('Failed to remove host');
         return 1;
       }
 
       return 0;
     } catch (err: any) {
-      console.error(chalk.red(`Failed to remove host: ${err.message}`));
+      error(`Failed to remove host: ${err.message}`);
       return 1;
     }
   }
@@ -202,23 +202,23 @@ export class MeshCommand extends Command {
         return 0;
       }
 
-      console.log(chalk.bold('\nLocal Host:\n'));
-      console.log(`  ${chalk.cyan('●')} ${localConfig.name} ${chalk.green('[local]')}`);
-      console.log(`    ID: ${chalk.gray(localConfig.id.slice(0, 8))}`);
+      console.log(colors.bold('\nLocal Host:\n'));
+      console.log(`  ${colors.cyan('●')} ${localConfig.name} ${colors.success('[local]')}`);
+      console.log(`    ID: ${colors.muted(localConfig.id.slice(0, 8))}`);
       console.log(`    Address: ${localIP}:${localConfig.port}`);
 
-      console.log(chalk.bold('\nKnown Hosts:\n'));
+      console.log(colors.bold('\nKnown Hosts:\n'));
 
       if (hosts.length === 0) {
-        console.log(chalk.gray('  No hosts configured.'));
-        console.log(chalk.gray('  Add hosts with: skillkit mesh add <address>'));
+        console.log(colors.muted('  No hosts configured.'));
+        console.log(colors.muted('  Add hosts with: skillkit mesh add <address>'));
       } else {
         for (const host of hosts) {
-          const statusIcon = host.status === 'online' ? chalk.green('●') : host.status === 'offline' ? chalk.red('●') : chalk.gray('○');
-          const statusLabel = host.status === 'online' ? chalk.green('[online]') : host.status === 'offline' ? chalk.red('[offline]') : chalk.gray('[unknown]');
+          const statusIcon = host.status === 'online' ? colors.success('●') : host.status === 'offline' ? colors.error('●') : colors.muted('○');
+          const statusLabel = host.status === 'online' ? colors.success('[online]') : host.status === 'offline' ? colors.error('[offline]') : colors.muted('[unknown]');
 
           console.log(`  ${statusIcon} ${host.name} ${statusLabel}`);
-          console.log(`    ID: ${chalk.gray(host.id.slice(0, 8))}`);
+          console.log(`    ID: ${colors.muted(host.id.slice(0, 8))}`);
           console.log(`    Address: ${host.address}:${host.port}`);
           if (host.tailscaleIP) {
             console.log(`    Tailscale: ${host.tailscaleIP}`);
@@ -235,9 +235,9 @@ export class MeshCommand extends Command {
           const tailscaleHosts = await discoverTailscaleHosts(localConfig.port);
 
           if (tailscaleHosts.length > 0) {
-            console.log(chalk.bold('\nTailscale Peers:\n'));
+            console.log(colors.bold('\nTailscale Peers:\n'));
             for (const host of tailscaleHosts) {
-              console.log(`  ${chalk.blue('◆')} ${host.name}`);
+              console.log(`  ${colors.info('◆')} ${host.name}`);
               console.log(`    IP: ${host.tailscaleIP}`);
             }
           }
@@ -247,7 +247,7 @@ export class MeshCommand extends Command {
       console.log();
       return 0;
     } catch (err: any) {
-      console.error(chalk.red(`Failed to list hosts: ${err.message}`));
+      error(`Failed to list hosts: ${err.message}`);
       return 1;
     }
   }
@@ -259,12 +259,12 @@ export class MeshCommand extends Command {
       const hosts = await getKnownHosts();
 
       if (hosts.length === 0) {
-        console.log(chalk.yellow('No hosts configured.'));
-        console.log(chalk.gray('Add hosts with: skillkit mesh add <address>'));
+        console.log(colors.warning('No hosts configured.'));
+        console.log(colors.muted('Add hosts with: skillkit mesh add <address>'));
         return 0;
       }
 
-      console.log(chalk.bold('\nChecking host health...\n'));
+      console.log(colors.bold('\nChecking host health...\n'));
 
       const timeout = this.timeout ? parseInt(this.timeout, 10) : undefined;
       const results = await checkAllHostsHealth({ timeout });
@@ -281,10 +281,10 @@ export class MeshCommand extends Command {
         const name = host?.name || result.hostId.slice(0, 8);
 
         if (result.status === 'online') {
-          console.log(`  ${chalk.green('✓')} ${name} - ${chalk.green('online')} (${result.latencyMs}ms)`);
+          console.log(`  ${colors.success('✓')} ${name} - ${colors.success('online')} (${result.latencyMs}ms)`);
         } else {
           hasFailures = true;
-          console.log(`  ${chalk.red('✗')} ${name} - ${chalk.red('offline')} ${result.error ? `(${result.error})` : ''}`);
+          console.log(`  ${colors.error('✗')} ${name} - ${colors.error('offline')} ${result.error ? `(${result.error})` : ''}`);
         }
       }
 
@@ -296,7 +296,7 @@ export class MeshCommand extends Command {
 
       return hasFailures ? 1 : 0;
     } catch (err: any) {
-      console.error(chalk.red(`Failed to check health: ${err.message}`));
+      error(`Failed to check health: ${err.message}`);
       return 1;
     }
   }
@@ -305,18 +305,18 @@ export class MeshCommand extends Command {
     try {
       const { discoverOnce, isTailscaleAvailable, discoverTailscaleHosts, getLocalHostConfig } = await import('@skillkit/mesh');
 
-      console.log(chalk.bold('\nDiscovering hosts on local network...\n'));
+      console.log(colors.bold('\nDiscovering hosts on local network...\n'));
 
       const timeout = this.timeout ? parseInt(this.timeout, 10) : 5000;
 
       const localHosts = await discoverOnce(timeout);
 
       if (localHosts.length === 0) {
-        console.log(chalk.gray('  No hosts discovered on local network.'));
+        console.log(colors.muted('  No hosts discovered on local network.'));
       } else {
-        console.log(chalk.cyan('Local Network:'));
+        console.log(colors.cyan('Local Network:'));
         for (const host of localHosts) {
-          console.log(`  ${chalk.green('●')} ${host.name}`);
+          console.log(`  ${colors.success('●')} ${host.name}`);
           console.log(`    Address: ${host.address}:${host.port}`);
         }
       }
@@ -328,23 +328,23 @@ export class MeshCommand extends Command {
           const tailscaleHosts = await discoverTailscaleHosts(localConfig.port);
 
           if (tailscaleHosts.length > 0) {
-            console.log(chalk.cyan('\nTailscale Network:'));
+            console.log(colors.cyan('\nTailscale Network:'));
             for (const host of tailscaleHosts) {
-              console.log(`  ${chalk.blue('◆')} ${host.name}`);
+              console.log(`  ${colors.info('◆')} ${host.name}`);
               console.log(`    Tailscale IP: ${host.tailscaleIP}`);
             }
           } else {
-            console.log(chalk.gray('\n  No Tailscale peers found.'));
+            console.log(colors.muted('\n  No Tailscale peers found.'));
           }
         } else {
-          console.log(chalk.gray('\n  Tailscale not available.'));
+          console.log(colors.muted('\n  Tailscale not available.'));
         }
       }
 
       console.log();
       return 0;
     } catch (err: any) {
-      console.error(chalk.red(`Failed to discover hosts: ${err.message}`));
+      error(`Failed to discover hosts: ${err.message}`);
       return 1;
     }
   }
@@ -373,31 +373,31 @@ export class MeshCommand extends Command {
         return 0;
       }
 
-      console.log(chalk.bold('\nMesh Network Status\n'));
+      console.log(colors.bold('\nMesh Network Status\n'));
 
-      console.log(chalk.cyan('Local Host:'));
+      console.log(colors.cyan('Local Host:'));
       console.log(`  Name: ${localConfig.name}`);
-      console.log(`  ID: ${chalk.gray(localConfig.id.slice(0, 8))}`);
+      console.log(`  ID: ${colors.muted(localConfig.id.slice(0, 8))}`);
       console.log(`  Address: ${localIP}:${localConfig.port}`);
 
       if (hasTailscale) {
         const tailscaleIP = await getTailscaleIP();
         if (tailscaleIP) {
-          console.log(`  Tailscale: ${chalk.blue(tailscaleIP)}`);
+          console.log(`  Tailscale: ${colors.info(tailscaleIP)}`);
         }
       }
 
       console.log();
-      console.log(chalk.cyan('Network:'));
+      console.log(colors.cyan('Network:'));
       console.log(`  Known hosts: ${hosts.length}`);
       console.log(`  Online: ${onlineHosts}`);
       console.log(`  Local peers: ${localPeers.length}`);
-      console.log(`  Tailscale: ${hasTailscale ? chalk.green('available') : chalk.gray('not available')}`);
+      console.log(`  Tailscale: ${hasTailscale ? colors.success('available') : colors.muted('not available')}`);
 
       console.log();
       return 0;
     } catch (err: any) {
-      console.error(chalk.red(`Failed to get status: ${err.message}`));
+      error(`Failed to get status: ${err.message}`);
       return 1;
     }
   }
@@ -411,8 +411,8 @@ export class MeshCommand extends Command {
       case 'status':
         return this.showSecurityStatus();
       default:
-        console.error(chalk.red(`Unknown security action: ${subAction}`));
-        console.log(chalk.gray('Available actions: init, status'));
+        error(`Unknown security action: ${subAction}`);
+        console.log(colors.muted('Available actions: init, status'));
         return 1;
     }
   }
@@ -421,33 +421,33 @@ export class MeshCommand extends Command {
     try {
       const { SecureKeystore, TLSManager, getLocalHostConfig, describeSecurityLevel, DEFAULT_SECURITY_CONFIG } = await import('@skillkit/mesh');
 
-      console.log(chalk.bold('\nInitializing mesh security...\n'));
+      console.log(colors.bold('\nInitializing mesh security...\n'));
 
       const keystore = new SecureKeystore();
       const identity = await keystore.loadOrCreateIdentity();
 
-      console.log(chalk.green('✓ Identity created/loaded'));
-      console.log(`  Fingerprint: ${chalk.cyan(identity.fingerprint)}`);
-      console.log(`  Public Key: ${chalk.gray(identity.publicKeyHex.slice(0, 32))}...`);
+      console.log(colors.success('✓ Identity created/loaded'));
+      console.log(`  Fingerprint: ${colors.cyan(identity.fingerprint)}`);
+      console.log(`  Public Key: ${colors.muted(identity.publicKeyHex.slice(0, 32))}...`);
 
       const localConfig = await getLocalHostConfig();
       const tlsManager = new TLSManager();
       const certInfo = await tlsManager.loadOrCreateCertificate(localConfig.id, 'localhost');
 
-      console.log(chalk.green('\n✓ TLS certificate generated'));
-      console.log(`  Fingerprint: ${chalk.gray(certInfo.fingerprint.slice(0, 16))}...`);
+      console.log(colors.success('\n✓ TLS certificate generated'));
+      console.log(`  Fingerprint: ${colors.muted(certInfo.fingerprint.slice(0, 16))}...`);
       console.log(`  Valid until: ${certInfo.notAfter.toLocaleDateString()}`);
 
-      console.log(chalk.green('\n✓ Security initialized'));
-      console.log(`  Mode: ${chalk.cyan(describeSecurityLevel(DEFAULT_SECURITY_CONFIG))}`);
+      console.log(colors.success('\n✓ Security initialized'));
+      console.log(`  Mode: ${colors.cyan(describeSecurityLevel(DEFAULT_SECURITY_CONFIG))}`);
 
-      console.log(chalk.gray('\nOther hosts can trust this peer using:'));
-      console.log(chalk.gray(`  skillkit mesh peer trust ${identity.fingerprint}`));
+      console.log(colors.muted('\nOther hosts can trust this peer using:'));
+      console.log(colors.muted(`  skillkit mesh peer trust ${identity.fingerprint}`));
 
       console.log();
       return 0;
     } catch (err: any) {
-      console.error(chalk.red(`Failed to initialize security: ${err.message}`));
+      error(`Failed to initialize security: ${err.message}`);
       return 1;
     }
   }
@@ -465,7 +465,7 @@ export class MeshCommand extends Command {
 
       const keystore = new SecureKeystore();
 
-      console.log(chalk.bold('\nMesh Security Status\n'));
+      console.log(colors.bold('\nMesh Security Status\n'));
 
       const hasIdentity = await keystore.hasIdentity();
 
@@ -474,47 +474,47 @@ export class MeshCommand extends Command {
         const trustedPeers = await keystore.getTrustedPeers();
         const revokedPeers = await keystore.getRevokedFingerprints();
 
-        console.log(chalk.cyan('Identity:'));
-        console.log(`  Fingerprint: ${chalk.green(identity.fingerprint)}`);
-        console.log(`  Public Key: ${chalk.gray(identity.publicKeyHex.slice(0, 32))}...`);
+        console.log(colors.cyan('Identity:'));
+        console.log(`  Fingerprint: ${colors.success(identity.fingerprint)}`);
+        console.log(`  Public Key: ${colors.muted(identity.publicKeyHex.slice(0, 32))}...`);
 
-        console.log(chalk.cyan('\nTrust:'));
+        console.log(colors.cyan('\nTrust:'));
         console.log(`  Trusted peers: ${trustedPeers.length}`);
         console.log(`  Revoked peers: ${revokedPeers.length}`);
 
         if (this.verbose && trustedPeers.length > 0) {
-          console.log(chalk.cyan('\nTrusted Peers:'));
+          console.log(colors.cyan('\nTrusted Peers:'));
           for (const peer of trustedPeers) {
-            console.log(`  ${chalk.green('●')} ${peer.name || peer.fingerprint.slice(0, 16)}`);
-            console.log(`    Fingerprint: ${chalk.gray(peer.fingerprint)}`);
+            console.log(`  ${colors.success('●')} ${peer.name || peer.fingerprint.slice(0, 16)}`);
+            console.log(`    Fingerprint: ${colors.muted(peer.fingerprint)}`);
             console.log(`    Added: ${new Date(peer.addedAt).toLocaleDateString()}`);
           }
         }
       } else {
-        console.log(chalk.yellow('Identity: Not initialized'));
-        console.log(chalk.gray('Run "skillkit mesh security init" to initialize.'));
+        console.log(colors.warning('Identity: Not initialized'));
+        console.log(colors.muted('Run "skillkit mesh security init" to initialize.'));
       }
 
       const localConfig = await getLocalHostConfig();
       const tlsManager = new TLSManager();
       const hasCert = await tlsManager.hasCertificate(localConfig.id);
 
-      console.log(chalk.cyan('\nTLS:'));
+      console.log(colors.cyan('\nTLS:'));
       if (hasCert) {
         const certInfo = await tlsManager.loadCertificate(localConfig.id);
-        console.log(`  Certificate: ${chalk.green('Available')}`);
+        console.log(`  Certificate: ${colors.success('Available')}`);
         if (certInfo) {
-          console.log(`  Fingerprint: ${chalk.gray(certInfo.fingerprint.slice(0, 16))}...`);
+          console.log(`  Fingerprint: ${colors.muted(certInfo.fingerprint.slice(0, 16))}...`);
         }
       } else {
-        console.log(`  Certificate: ${chalk.yellow('Not generated')}`);
+        console.log(`  Certificate: ${colors.warning('Not generated')}`);
       }
 
-      console.log(chalk.cyan('\nConfiguration:'));
-      console.log(`  Security level: ${chalk.cyan(describeSecurityLevel(DEFAULT_SECURITY_CONFIG))}`);
+      console.log(colors.cyan('\nConfiguration:'));
+      console.log(`  Security level: ${colors.cyan(describeSecurityLevel(DEFAULT_SECURITY_CONFIG))}`);
       console.log(`  Discovery mode: ${DEFAULT_SECURITY_CONFIG.discovery.mode}`);
       console.log(`  Transport encryption: ${DEFAULT_SECURITY_CONFIG.transport.encryption}`);
-      console.log(`  Auth required: ${DEFAULT_SECURITY_CONFIG.transport.requireAuth ? chalk.green('yes') : chalk.gray('no')}`);
+      console.log(`  Auth required: ${DEFAULT_SECURITY_CONFIG.transport.requireAuth ? colors.success('yes') : colors.muted('no')}`);
 
       if (this.json) {
         const identity = hasIdentity ? await keystore.loadOrCreateIdentity() : null;
@@ -530,7 +530,7 @@ export class MeshCommand extends Command {
       console.log();
       return 0;
     } catch (err: any) {
-      console.error(chalk.red(`Failed to get security status: ${err.message}`));
+      error(`Failed to get security status: ${err.message}`);
       return 1;
     }
   }
@@ -539,8 +539,8 @@ export class MeshCommand extends Command {
     const subAction = this.arg;
 
     if (!subAction) {
-      console.error(chalk.red('Error: Peer action is required'));
-      console.log(chalk.gray('Usage: skillkit mesh peer <trust|revoke|list> [fingerprint]'));
+      error('Error: Peer action is required');
+      console.log(colors.muted('Usage: skillkit mesh peer <trust|revoke|list> [fingerprint]'));
       return 1;
     }
 
@@ -552,8 +552,8 @@ export class MeshCommand extends Command {
       case 'list':
         return this.listPeers();
       default:
-        console.error(chalk.red(`Unknown peer action: ${subAction}`));
-        console.log(chalk.gray('Available actions: trust, revoke, list'));
+        error(`Unknown peer action: ${subAction}`);
+        console.log(colors.muted('Available actions: trust, revoke, list'));
         return 1;
     }
   }
@@ -562,8 +562,8 @@ export class MeshCommand extends Command {
     const fingerprint = this.subArg;
 
     if (!fingerprint) {
-      console.error(chalk.red('Error: Fingerprint is required'));
-      console.log(chalk.gray('Usage: skillkit mesh peer trust <fingerprint> [--name <name>]'));
+      error('Error: Fingerprint is required');
+      console.log(colors.muted('Usage: skillkit mesh peer trust <fingerprint> [--name <name>]'));
       return 1;
     }
 
@@ -574,17 +574,17 @@ export class MeshCommand extends Command {
 
       const isRevoked = await keystore.isRevoked(fingerprint);
       if (isRevoked) {
-        console.log(chalk.yellow(`Peer ${fingerprint.slice(0, 8)} was previously revoked. Removing from revoked list...`));
+        console.log(colors.warning(`Peer ${fingerprint.slice(0, 8)} was previously revoked. Removing from revoked list...`));
       }
 
       await keystore.addTrustedPeer(fingerprint, '', this.name);
 
-      console.log(chalk.green(`✓ Trusted peer: ${this.name || fingerprint.slice(0, 16)}`));
-      console.log(`  Fingerprint: ${chalk.gray(fingerprint)}`);
+      console.log(colors.success(`✓ Trusted peer: ${this.name || fingerprint.slice(0, 16)}`));
+      console.log(`  Fingerprint: ${colors.muted(fingerprint)}`);
 
       return 0;
     } catch (err: any) {
-      console.error(chalk.red(`Failed to trust peer: ${err.message}`));
+      error(`Failed to trust peer: ${err.message}`);
       return 1;
     }
   }
@@ -593,8 +593,8 @@ export class MeshCommand extends Command {
     const fingerprint = this.subArg;
 
     if (!fingerprint) {
-      console.error(chalk.red('Error: Fingerprint is required'));
-      console.log(chalk.gray('Usage: skillkit mesh peer revoke <fingerprint>'));
+      error('Error: Fingerprint is required');
+      console.log(colors.muted('Usage: skillkit mesh peer revoke <fingerprint>'));
       return 1;
     }
 
@@ -604,12 +604,12 @@ export class MeshCommand extends Command {
       const keystore = new SecureKeystore();
       await keystore.revokePeer(fingerprint);
 
-      console.log(chalk.green(`✓ Revoked peer: ${fingerprint.slice(0, 16)}`));
-      console.log(chalk.gray('This peer will no longer be trusted for mesh communication.'));
+      console.log(colors.success(`✓ Revoked peer: ${fingerprint.slice(0, 16)}`));
+      console.log(colors.muted('This peer will no longer be trusted for mesh communication.'));
 
       return 0;
     } catch (err: any) {
-      console.error(chalk.red(`Failed to revoke peer: ${err.message}`));
+      error(`Failed to revoke peer: ${err.message}`);
       return 1;
     }
   }
@@ -627,34 +627,34 @@ export class MeshCommand extends Command {
         return 0;
       }
 
-      console.log(chalk.bold('\nPeer Trust Status\n'));
+      console.log(colors.bold('\nPeer Trust Status\n'));
 
       if (this.trusted || trustedPeers.length > 0) {
-        console.log(chalk.cyan('Trusted Peers:'));
+        console.log(colors.cyan('Trusted Peers:'));
         if (trustedPeers.length === 0) {
-          console.log(chalk.gray('  No trusted peers.'));
+          console.log(colors.muted('  No trusted peers.'));
         } else {
           for (const peer of trustedPeers) {
-            console.log(`  ${chalk.green('●')} ${peer.name || 'Unknown'}`);
-            console.log(`    Fingerprint: ${chalk.gray(peer.fingerprint)}`);
+            console.log(`  ${colors.success('●')} ${peer.name || 'Unknown'}`);
+            console.log(`    Fingerprint: ${colors.muted(peer.fingerprint)}`);
             console.log(`    Added: ${new Date(peer.addedAt).toLocaleDateString()}`);
           }
         }
       }
 
       if (!this.trusted && revokedFingerprints.length > 0) {
-        console.log(chalk.cyan('\nRevoked Peers:'));
+        console.log(colors.cyan('\nRevoked Peers:'));
         for (const fp of revokedFingerprints) {
-          console.log(`  ${chalk.red('●')} ${chalk.gray(fp)}`);
+          console.log(`  ${colors.error('●')} ${colors.muted(fp)}`);
         }
       }
 
-      console.log(chalk.gray(`\nTotal: ${trustedPeers.length} trusted, ${revokedFingerprints.length} revoked`));
+      console.log(colors.muted(`\nTotal: ${trustedPeers.length} trusted, ${revokedFingerprints.length} revoked`));
       console.log();
 
       return 0;
     } catch (err: any) {
-      console.error(chalk.red(`Failed to list peers: ${err.message}`));
+      error(`Failed to list peers: ${err.message}`);
       return 1;
     }
   }

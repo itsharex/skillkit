@@ -1,5 +1,5 @@
 import { Command, Option } from 'clipanion';
-import chalk from 'chalk';
+import { colors, warn, error } from '../onboarding/index.js';
 import { SessionTimeline } from '@skillkit/core';
 import type { TimelineEventType } from '@skillkit/core';
 
@@ -52,8 +52,8 @@ export class TimelineCommand extends Command {
     let types: TimelineEventType[] | undefined;
     if (this.type) {
       if (!validTypes.includes(this.type as TimelineEventType)) {
-        console.log(chalk.red(`Invalid event type: ${this.type}`));
-        console.log(chalk.dim(`Valid types: ${validTypes.join(', ')}`));
+        error(`Invalid event type: ${this.type}`);
+        console.log(colors.muted(`Valid types: ${validTypes.join(', ')}`));
         return 1;
       }
       types = [this.type as TimelineEventType];
@@ -72,8 +72,8 @@ export class TimelineCommand extends Command {
     }
 
     if (data.events.length === 0) {
-      console.log(chalk.yellow('No timeline events found.'));
-      console.log(chalk.dim('Events are recorded during skill execution, git commits, and observations.'));
+      warn('No timeline events found.');
+      console.log(colors.muted('Events are recorded during skill execution, git commits, and observations.'));
       return 0;
     }
 

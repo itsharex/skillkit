@@ -5,7 +5,7 @@
  */
 
 import { Command, Option } from 'clipanion';
-import chalk from 'chalk';
+import { colors } from '../onboarding/index.js';
 import { createMethodologyManager, createMethodologyLoader } from '@skillkit/core';
 
 export class MethodologyCommand extends Command {
@@ -50,12 +50,12 @@ export class MethodologyCommand extends Command {
         case 'installed':
           return await this.listInstalled(projectPath);
         default:
-          this.context.stderr.write(chalk.red(`Unknown action: ${this.action}\n`));
+          this.context.stderr.write(colors.error(`Unknown action: ${this.action}\n`));
           this.context.stderr.write('Available actions: list, install, uninstall, sync, search, info, installed\n');
           return 1;
       }
     } catch (err) {
-      this.context.stderr.write(chalk.red(`✗ ${err instanceof Error ? err.message : 'Unknown error'}\n`));
+      this.context.stderr.write(colors.error(`✗ ${err instanceof Error ? err.message : 'Unknown error'}\n`));
       return 1;
     }
   }
@@ -69,18 +69,18 @@ export class MethodologyCommand extends Command {
       return 0;
     }
 
-    this.context.stdout.write(chalk.cyan('Available Methodology Packs:\n\n'));
+    this.context.stdout.write(colors.cyan('Available Methodology Packs:\n\n'));
 
     for (const pack of packs) {
-      this.context.stdout.write(chalk.green(`  ${pack.name}`) + ` v${pack.version}\n`);
-      this.context.stdout.write(chalk.gray(`    ${pack.description}\n`));
+      this.context.stdout.write(colors.success(`  ${pack.name}`) + ` v${pack.version}\n`);
+      this.context.stdout.write(colors.muted(`    ${pack.description}\n`));
       this.context.stdout.write(`    Skills: ${pack.skills.join(', ')}\n`);
       this.context.stdout.write(`    Tags: ${pack.tags.join(', ')}\n`);
       this.context.stdout.write('\n');
     }
 
     this.context.stdout.write(`Total: ${packs.length} packs\n`);
-    this.context.stdout.write(chalk.gray('\nRun `skillkit methodology install` to install all packs.\n'));
+    this.context.stdout.write(colors.muted('\nRun `skillkit methodology install` to install all packs.\n'));
     return 0;
   }
 
@@ -92,31 +92,31 @@ export class MethodologyCommand extends Command {
       // Check if it's a skill ID (pack/skill) or pack name
       if (this.target.includes('/')) {
         // Install single skill
-        this.context.stdout.write(`Installing skill: ${chalk.cyan(this.target)}...\n`);
+        this.context.stdout.write(`Installing skill: ${colors.cyan(this.target)}...\n`);
 
         if (this.dryRun) {
-          this.context.stdout.write(chalk.yellow('[dry-run] Would install skill.\n'));
+          this.context.stdout.write(colors.warning('[dry-run] Would install skill.\n'));
           return 0;
         }
 
         const result = await manager.installSkill(this.target);
 
         if (result.success) {
-          this.context.stdout.write(chalk.green(`✓ Skill installed: ${this.target}\n`));
+          this.context.stdout.write(colors.success(`✓ Skill installed: ${this.target}\n`));
         } else {
           for (const failed of result.failed) {
-            this.context.stderr.write(chalk.red(`✗ ${failed.name}: ${failed.error}\n`));
+            this.context.stderr.write(colors.error(`✗ ${failed.name}: ${failed.error}\n`));
           }
           return 1;
         }
       } else {
         // Install single pack
-        this.context.stdout.write(`Installing pack: ${chalk.cyan(this.target)}...\n`);
+        this.context.stdout.write(`Installing pack: ${colors.cyan(this.target)}...\n`);
 
         if (this.dryRun) {
           const pack = await loader.loadPack(this.target);
           if (pack) {
-            this.context.stdout.write(chalk.yellow(`[dry-run] Would install ${pack.skills.length} skills.\n`));
+            this.context.stdout.write(colors.warning(`[dry-run] Would install ${pack.skills.length} skills.\n`));
           }
           return 0;
         }
@@ -124,15 +124,15 @@ export class MethodologyCommand extends Command {
         const result = await manager.installPack(this.target);
 
         if (result.success) {
-          this.context.stdout.write(chalk.green(`✓ Pack "${this.target}" installed!\n`));
+          this.context.stdout.write(colors.success(`✓ Pack "${this.target}" installed!\n`));
           this.context.stdout.write(`  Installed: ${result.installed.length} skills\n`);
           if (result.skipped.length > 0) {
             this.context.stdout.write(`  Skipped (already installed): ${result.skipped.length}\n`);
           }
         } else {
-          this.context.stderr.write(chalk.red(`✗ Failed to install pack\n`));
+          this.context.stderr.write(colors.error(`✗ Failed to install pack\n`));
           for (const failed of result.failed) {
-            this.context.stderr.write(chalk.red(`  - ${failed.name}: ${failed.error}\n`));
+            this.context.stderr.write(colors.error(`  - ${failed.name}: ${failed.error}\n`));
           }
           return 1;
         }
@@ -145,31 +145,31 @@ export class MethodologyCommand extends Command {
         const packs = await loader.loadAllPacks();
         let totalSkills = 0;
         for (const pack of packs) {
-          this.context.stdout.write(chalk.yellow(`[dry-run] Would install ${pack.name} (${pack.skills.length} skills)\n`));
+          this.context.stdout.write(colors.warning(`[dry-run] Would install ${pack.name} (${pack.skills.length} skills)\n`));
           totalSkills += pack.skills.length;
         }
-        this.context.stdout.write(chalk.yellow(`\n[dry-run] Would install ${totalSkills} skills total.\n`));
+        this.context.stdout.write(colors.warning(`\n[dry-run] Would install ${totalSkills} skills total.\n`));
         return 0;
       }
 
       const result = await manager.installAllPacks();
 
       if (result.success) {
-        this.context.stdout.write(chalk.green('\n✓ All methodology packs installed!\n'));
+        this.context.stdout.write(colors.success('\n✓ All methodology packs installed!\n'));
         this.context.stdout.write(`  Installed: ${result.installed.length} skills\n`);
         if (result.skipped.length > 0) {
           this.context.stdout.write(`  Skipped (already installed): ${result.skipped.length}\n`);
         }
       } else {
-        this.context.stdout.write(chalk.yellow('\n⚠ Some skills failed to install:\n'));
+        this.context.stdout.write(colors.warning('\n⚠ Some skills failed to install:\n'));
         for (const failed of result.failed) {
-          this.context.stderr.write(chalk.red(`  - ${failed.name}: ${failed.error}\n`));
+          this.context.stderr.write(colors.error(`  - ${failed.name}: ${failed.error}\n`));
         }
         this.context.stdout.write(`\n  Installed: ${result.installed.length} skills\n`);
       }
     }
 
-    this.context.stdout.write(chalk.gray('\nRun `skillkit methodology sync` to sync to detected agents.\n'));
+    this.context.stdout.write(colors.muted('\nRun `skillkit methodology sync` to sync to detected agents.\n'));
     return 0;
   }
 
@@ -177,18 +177,18 @@ export class MethodologyCommand extends Command {
     const manager = createMethodologyManager({ projectPath });
 
     if (!this.target) {
-      this.context.stderr.write(chalk.red('Pack name required for uninstall.\n'));
+      this.context.stderr.write(colors.error('Pack name required for uninstall.\n'));
       this.context.stderr.write('Usage: skillkit methodology uninstall <pack-name>\n');
       return 1;
     }
 
     if (this.dryRun) {
-      this.context.stdout.write(chalk.yellow(`[dry-run] Would uninstall pack: ${this.target}\n`));
+      this.context.stdout.write(colors.warning(`[dry-run] Would uninstall pack: ${this.target}\n`));
       return 0;
     }
 
     await manager.uninstallPack(this.target);
-    this.context.stdout.write(chalk.green(`✓ Pack "${this.target}" uninstalled.\n`));
+    this.context.stdout.write(colors.success(`✓ Pack "${this.target}" uninstalled.\n`));
     return 0;
   }
 
@@ -199,23 +199,23 @@ export class MethodologyCommand extends Command {
 
     if (this.dryRun) {
       const installed = manager.listInstalledSkills();
-      this.context.stdout.write(chalk.yellow(`[dry-run] Would sync ${installed.length} skills.\n`));
+      this.context.stdout.write(colors.warning(`[dry-run] Would sync ${installed.length} skills.\n`));
       return 0;
     }
 
     const result = await manager.syncAll();
 
     if (result.synced.length > 0) {
-      this.context.stdout.write(chalk.green('✓ Sync complete!\n'));
+      this.context.stdout.write(colors.success('✓ Sync complete!\n'));
       for (const sync of result.synced) {
         this.context.stdout.write(`  ${sync.skill} → ${sync.agents.join(', ')}\n`);
       }
     }
 
     if (result.failed.length > 0) {
-      this.context.stdout.write(chalk.yellow('\n⚠ Some syncs failed:\n'));
+      this.context.stdout.write(colors.warning('\n⚠ Some syncs failed:\n'));
       for (const fail of result.failed) {
-        this.context.stderr.write(chalk.red(`  ${fail.skill} (${fail.agent}): ${fail.error}\n`));
+        this.context.stderr.write(colors.error(`  ${fail.skill} (${fail.agent}): ${fail.error}\n`));
       }
     }
 
@@ -230,7 +230,7 @@ export class MethodologyCommand extends Command {
     const loader = createMethodologyLoader();
 
     if (!this.target) {
-      this.context.stderr.write(chalk.red('Search query required.\n'));
+      this.context.stderr.write(colors.error('Search query required.\n'));
       this.context.stderr.write('Usage: skillkit methodology search <query>\n');
       return 1;
     }
@@ -242,11 +242,11 @@ export class MethodologyCommand extends Command {
       return 0;
     }
 
-    this.context.stdout.write(chalk.cyan(`Found ${skills.length} skills matching "${this.target}":\n\n`));
+    this.context.stdout.write(colors.cyan(`Found ${skills.length} skills matching "${this.target}":\n\n`));
 
     for (const skill of skills) {
-      this.context.stdout.write(chalk.green(`  ${skill.id}`) + ` v${skill.version}\n`);
-      this.context.stdout.write(chalk.gray(`    ${skill.description || 'No description'}\n`));
+      this.context.stdout.write(colors.success(`  ${skill.id}`) + ` v${skill.version}\n`);
+      this.context.stdout.write(colors.muted(`    ${skill.description || 'No description'}\n`));
       if (skill.tags.length > 0) {
         this.context.stdout.write(`    Tags: ${skill.tags.join(', ')}\n`);
       }
@@ -263,7 +263,7 @@ export class MethodologyCommand extends Command {
     const loader = createMethodologyLoader();
 
     if (!this.target) {
-      this.context.stderr.write(chalk.red('Pack name required.\n'));
+      this.context.stderr.write(colors.error('Pack name required.\n'));
       this.context.stderr.write('Usage: skillkit methodology info <pack-name>\n');
       return 1;
     }
@@ -271,11 +271,11 @@ export class MethodologyCommand extends Command {
     const pack = await loader.loadPack(this.target);
 
     if (!pack) {
-      this.context.stderr.write(chalk.red(`Pack not found: ${this.target}\n`));
+      this.context.stderr.write(colors.error(`Pack not found: ${this.target}\n`));
       return 1;
     }
 
-    this.context.stdout.write(chalk.cyan(`\nPack: ${pack.name}\n`));
+    this.context.stdout.write(colors.cyan(`\nPack: ${pack.name}\n`));
     this.context.stdout.write(`Version: ${pack.version}\n`);
     this.context.stdout.write(`Description: ${pack.description}\n`);
     this.context.stdout.write(`Tags: ${pack.tags.join(', ')}\n`);
@@ -283,12 +283,12 @@ export class MethodologyCommand extends Command {
     this.context.stdout.write(`License: ${pack.license || 'Unknown'}\n`);
     this.context.stdout.write(`Compatibility: ${pack.compatibility.join(', ')}\n`);
 
-    this.context.stdout.write(chalk.cyan(`\nSkills (${pack.skills.length}):\n`));
+    this.context.stdout.write(colors.cyan(`\nSkills (${pack.skills.length}):\n`));
 
     const skills = await loader.loadPackSkills(this.target);
     for (const skill of skills) {
-      this.context.stdout.write(chalk.green(`  ${skill.id.split('/')[1]}\n`));
-      this.context.stdout.write(chalk.gray(`    ${skill.description || 'No description'}\n`));
+      this.context.stdout.write(colors.success(`  ${skill.id.split('/')[1]}\n`));
+      this.context.stdout.write(colors.muted(`    ${skill.description || 'No description'}\n`));
       if (this.verbose) {
         if (skill.metadata.triggers) {
           this.context.stdout.write(`    Triggers: ${skill.metadata.triggers.join(', ')}\n`);
@@ -302,7 +302,7 @@ export class MethodologyCommand extends Command {
       }
     }
 
-    this.context.stdout.write(chalk.gray(`\nRun \`skillkit methodology install ${this.target}\` to install this pack.\n`));
+    this.context.stdout.write(colors.muted(`\nRun \`skillkit methodology install ${this.target}\` to install this pack.\n`));
     return 0;
   }
 
@@ -314,30 +314,30 @@ export class MethodologyCommand extends Command {
 
     if (installedPacks.length === 0 && installedSkills.length === 0) {
       this.context.stdout.write('No methodology skills installed.\n');
-      this.context.stdout.write(chalk.gray('Run `skillkit methodology install` to install methodology packs.\n'));
+      this.context.stdout.write(colors.muted('Run `skillkit methodology install` to install methodology packs.\n'));
       return 0;
     }
 
     if (installedPacks.length > 0) {
-      this.context.stdout.write(chalk.cyan('Installed Packs:\n'));
+      this.context.stdout.write(colors.cyan('Installed Packs:\n'));
       for (const pack of installedPacks) {
-        this.context.stdout.write(chalk.green(`  ${pack.name}`) + ` v${pack.version}\n`);
+        this.context.stdout.write(colors.success(`  ${pack.name}`) + ` v${pack.version}\n`);
         this.context.stdout.write(`    Skills: ${pack.skills.length}\n`);
       }
       this.context.stdout.write('\n');
     }
 
     if (installedSkills.length > 0) {
-      this.context.stdout.write(chalk.cyan('Installed Skills:\n'));
+      this.context.stdout.write(colors.cyan('Installed Skills:\n'));
       for (const skill of installedSkills) {
         const syncStatus = skill.syncedAgents.length > 0
-          ? chalk.green(`synced to ${skill.syncedAgents.length} agents`)
-          : chalk.yellow('not synced');
-        this.context.stdout.write(`  ${chalk.green(skill.id)} v${skill.version} [${syncStatus}]\n`);
+          ? colors.success(`synced to ${skill.syncedAgents.length} agents`)
+          : colors.warning('not synced');
+        this.context.stdout.write(`  ${colors.success(skill.id)} v${skill.version} [${syncStatus}]\n`);
       }
     }
 
-    this.context.stdout.write(chalk.gray(`\nTotal: ${installedSkills.length} skills installed.\n`));
+    this.context.stdout.write(colors.muted(`\nTotal: ${installedSkills.length} skills installed.\n`));
     return 0;
   }
 }

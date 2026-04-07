@@ -1,7 +1,7 @@
 import { Command, Option } from 'clipanion';
 import { resolve } from 'node:path';
 import { existsSync } from 'node:fs';
-import chalk from 'chalk';
+import { colors } from '../onboarding/index.js';
 import type { AgentType } from '@skillkit/core';
 import { SessionManager, findAllSkills, loadConfig, getProjectConfigPath } from '@skillkit/core';
 import { detectAgent, getAdapter } from '@skillkit/agents';
@@ -77,34 +77,34 @@ export class StatusCommand extends Command {
     // Show current execution
     if (state.currentExecution) {
       const exec = state.currentExecution;
-      const statusColor = exec.status === 'paused' ? chalk.yellow : chalk.green;
+      const statusColor = exec.status === 'paused' ? colors.warning : colors.success;
 
-      console.log(chalk.cyan('Current Execution:\n'));
-      console.log(`  Skill: ${chalk.bold(exec.skillName)}`);
-      console.log(`  Source: ${chalk.dim(exec.skillSource)}`);
+      console.log(colors.cyan('Current Execution:\n'));
+      console.log(`  Skill: ${colors.bold(exec.skillName)}`);
+      console.log(`  Source: ${colors.muted(exec.skillSource)}`);
       console.log(`  Status: ${statusColor(exec.status)}`);
       console.log(`  Progress: ${exec.currentStep}/${exec.totalSteps} tasks`);
-      console.log(`  Started: ${chalk.dim(new Date(exec.startedAt).toLocaleString())}`);
+      console.log(`  Started: ${colors.muted(new Date(exec.startedAt).toLocaleString())}`);
 
       if (exec.pausedAt) {
-        console.log(`  Paused: ${chalk.dim(new Date(exec.pausedAt).toLocaleString())}`);
+        console.log(`  Paused: ${colors.muted(new Date(exec.pausedAt).toLocaleString())}`);
       }
 
-      console.log(chalk.cyan('\n  Tasks:'));
+      console.log(colors.cyan('\n  Tasks:'));
       for (const task of exec.tasks) {
         const statusIcon = this.getStatusIcon(task.status);
         const statusText = this.getStatusColor(task.status)(task.status);
         console.log(`    ${statusIcon} ${task.name} - ${statusText}`);
         if (task.error) {
-          console.log(`      ${chalk.red('Error:')} ${task.error}`);
+          console.log(`      ${colors.error('Error:')} ${task.error}`);
         }
       }
 
       if (exec.status === 'paused') {
-        console.log(chalk.yellow('\n  Resume with: skillkit resume'));
+        console.log(colors.warning('\n  Resume with: skillkit resume'));
       }
     } else {
-      console.log(chalk.dim('No active execution.'));
+      console.log(colors.muted('No active execution.'));
     }
 
     // Show history
@@ -113,22 +113,22 @@ export class StatusCommand extends Command {
       const history = manager.getHistory(limit);
 
       if (history.length > 0) {
-        console.log(chalk.cyan('\nExecution History:\n'));
+        console.log(colors.cyan('\nExecution History:\n'));
 
         for (const entry of history) {
-          const statusColor = entry.status === 'completed' ? chalk.green : chalk.red;
+          const statusColor = entry.status === 'completed' ? colors.success : colors.error;
           const duration = this.formatDuration(entry.durationMs);
 
-          console.log(`  ${statusColor('●')} ${chalk.bold(entry.skillName)}`);
-          console.log(`    ${chalk.dim(entry.skillSource)} • ${duration}`);
-          console.log(`    ${chalk.dim(new Date(entry.completedAt).toLocaleString())}`);
+          console.log(`  ${statusColor('●')} ${colors.bold(entry.skillName)}`);
+          console.log(`    ${colors.muted(entry.skillSource)} • ${duration}`);
+          console.log(`    ${colors.muted(new Date(entry.completedAt).toLocaleString())}`);
 
           if (entry.commits.length > 0) {
-            console.log(`    Commits: ${chalk.dim(entry.commits.join(', '))}`);
+            console.log(`    Commits: ${colors.muted(entry.commits.join(', '))}`);
           }
 
           if (entry.error) {
-            console.log(`    ${chalk.red('Error:')} ${entry.error}`);
+            console.log(`    ${colors.error('Error:')} ${entry.error}`);
           }
 
           console.log();
@@ -138,12 +138,12 @@ export class StatusCommand extends Command {
 
     // Show decisions
     if (state.decisions.length > 0) {
-      console.log(chalk.cyan('Saved Decisions:\n'));
+      console.log(colors.cyan('Saved Decisions:\n'));
       for (const decision of state.decisions.slice(0, 5)) {
-        console.log(`  ${chalk.dim(decision.key)}: ${decision.value}`);
+        console.log(`  ${colors.muted(decision.key)}: ${decision.value}`);
       }
       if (state.decisions.length > 5) {
-        console.log(chalk.dim(`  ... and ${state.decisions.length - 5} more`));
+        console.log(colors.muted(`  ... and ${state.decisions.length - 5} more`));
       }
     }
 
@@ -199,59 +199,59 @@ export class StatusCommand extends Command {
 
   private showOverview(overview: StatusOverview): void {
     console.log('');
-    console.log(chalk.cyan('  Project Overview'));
-    console.log(`    Agent:    ${chalk.bold(overview.agent)}`);
-    console.log(`    Config:   ${overview.config ? chalk.green('skillkit.yaml') : chalk.dim('none (defaults)')}`);
-    console.log(`    Version:  ${chalk.bold(overview.version)}`);
+    console.log(colors.cyan('  Project Overview'));
+    console.log(`    Agent:    ${colors.bold(overview.agent)}`);
+    console.log(`    Config:   ${overview.config ? colors.success('skillkit.yaml') : colors.muted('none (defaults)')}`);
+    console.log(`    Version:  ${colors.bold(overview.version)}`);
     console.log('');
 
-    console.log(chalk.cyan(`  Skills (${overview.totalSkills} installed)`));
+    console.log(colors.cyan(`  Skills (${overview.totalSkills} installed)`));
     console.log(`    Project:  ${overview.projectSkills} skills in ${overview.skillsDir}`);
     console.log(`    Global:   ${overview.globalSkills} skills`);
     console.log('');
 
-    console.log(chalk.cyan('  Recent Activity'));
+    console.log(colors.cyan('  Recent Activity'));
     if (overview.recentHistory.length === 0) {
-      console.log(chalk.dim('    No recent executions.'));
+      console.log(colors.muted('    No recent executions.'));
     } else {
       for (const entry of overview.recentHistory) {
-        const statusColor = entry.status === 'completed' ? chalk.green : chalk.red;
+        const statusColor = entry.status === 'completed' ? colors.success : colors.error;
         console.log(`    ${statusColor('\u25cf')} ${entry.skillName} - ${new Date(entry.completedAt).toLocaleDateString()}`);
       }
     }
     console.log('');
 
-    console.log(chalk.dim('  Tip: Run "skillkit doctor" for a full health check.'));
+    console.log(colors.muted('  Tip: Run "skillkit doctor" for a full health check.'));
     console.log('');
   }
 
   private getStatusIcon(status: string): string {
     switch (status) {
       case 'completed':
-        return chalk.green('✓');
+        return colors.success('✓');
       case 'failed':
-        return chalk.red('✗');
+        return colors.error('✗');
       case 'in_progress':
-        return chalk.blue('●');
+        return colors.info('●');
       case 'paused':
-        return chalk.yellow('⏸');
+        return colors.warning('⏸');
       default:
-        return chalk.dim('○');
+        return colors.muted('○');
     }
   }
 
   private getStatusColor(status: string): (text: string) => string {
     switch (status) {
       case 'completed':
-        return chalk.green;
+        return colors.success;
       case 'failed':
-        return chalk.red;
+        return colors.error;
       case 'in_progress':
-        return chalk.blue;
+        return colors.info;
       case 'paused':
-        return chalk.yellow;
+        return colors.warning;
       default:
-        return chalk.dim;
+        return colors.muted;
     }
   }
 

@@ -1,5 +1,5 @@
 import { Command, Option } from 'clipanion';
-import chalk from 'chalk';
+import { colors, error } from '../onboarding/index.js';
 
 export class MessageCommand extends Command {
   static override paths = [['message'], ['msg']];
@@ -66,8 +66,8 @@ export class MessageCommand extends Command {
       case 'status':
         return this.showStatus();
       default:
-        console.error(chalk.red(`Unknown action: ${action}`));
-        console.log(chalk.gray('Available actions: send, inbox, read, reply, archive, forward, sent, status'));
+        error(`Unknown action: ${action}`);
+        console.log(colors.muted('Available actions: send, inbox, read, reply, archive, forward, sent, status'));
         return 1;
     }
   }
@@ -79,14 +79,14 @@ export class MessageCommand extends Command {
   private async sendMessage(): Promise<number> {
     const to = this.arg;
     if (!to) {
-      console.error(chalk.red('Error: Recipient is required'));
-      console.log(chalk.gray('Usage: skillkit message send <to> --body "..."'));
+      error('Error: Recipient is required');
+      console.log(colors.muted('Usage: skillkit message send <to> --body "..."'));
       return 1;
     }
 
     if (!this.body) {
-      console.error(chalk.red('Error: Message body is required'));
-      console.log(chalk.gray('Usage: skillkit message send <to> --body "..."'));
+      error('Error: Message body is required');
+      console.log(colors.muted('Usage: skillkit message send <to> --body "..."'));
       return 1;
     }
 
@@ -105,20 +105,20 @@ export class MessageCommand extends Command {
       });
 
       if (result.delivered) {
-        console.log(chalk.green(`✓ Message sent to ${to}`));
-        console.log(`  ID: ${chalk.gray(result.messageId.slice(0, 8))}`);
+        console.log(colors.success(`✓ Message sent to ${to}`));
+        console.log(`  ID: ${colors.muted(result.messageId.slice(0, 8))}`);
         console.log(`  Via: ${result.via}`);
       } else {
-        console.error(chalk.red(`✗ Failed to deliver message`));
+        error(`✗ Failed to deliver message`);
         if (result.error) {
-          console.error(chalk.gray(`  Error: ${result.error}`));
+          console.error(colors.muted(`  Error: ${result.error}`));
         }
         return 1;
       }
 
       return 0;
     } catch (err: any) {
-      console.error(chalk.red(`Failed to send message: ${err.message}`));
+      error(`Failed to send message: ${err.message}`);
       return 1;
     }
   }
@@ -147,33 +147,33 @@ export class MessageCommand extends Command {
 
       const summary = await service.getInboxSummary();
 
-      console.log(chalk.bold(`\nInbox (${summary.unread} unread / ${summary.total} total)\n`));
+      console.log(colors.bold(`\nInbox (${summary.unread} unread / ${summary.total} total)\n`));
 
       if (messages.length === 0) {
-        console.log(chalk.gray('  No messages.'));
+        console.log(colors.muted('  No messages.'));
         return 0;
       }
 
       for (const message of messages) {
         const isUnread = message.status === 'unread';
         const priorityIcon = this.getPriorityIcon(message.priority);
-        const statusIcon = isUnread ? chalk.cyan('●') : chalk.gray('○');
+        const statusIcon = isUnread ? colors.cyan('●') : colors.muted('○');
 
-        console.log(`${statusIcon} ${priorityIcon} ${isUnread ? chalk.bold(message.subject) : message.subject}`);
-        console.log(`  ID: ${chalk.gray(message.id.slice(0, 8))} | From: ${message.from} | ${this.formatDate(message.createdAt)}`);
+        console.log(`${statusIcon} ${priorityIcon} ${isUnread ? colors.bold(message.subject) : message.subject}`);
+        console.log(`  ID: ${colors.muted(message.id.slice(0, 8))} | From: ${message.from} | ${this.formatDate(message.createdAt)}`);
 
         if (this.verbose) {
           const bodyPreview = typeof message.body === 'string'
             ? message.body.slice(0, 80)
             : JSON.stringify(message.body).slice(0, 80);
-          console.log(`  ${chalk.gray(bodyPreview)}${bodyPreview.length >= 80 ? '...' : ''}`);
+          console.log(`  ${colors.muted(bodyPreview)}${bodyPreview.length >= 80 ? '...' : ''}`);
         }
       }
 
       console.log();
       return 0;
     } catch (err: any) {
-      console.error(chalk.red(`Failed to show inbox: ${err.message}`));
+      error(`Failed to show inbox: ${err.message}`);
       return 1;
     }
   }
@@ -181,8 +181,8 @@ export class MessageCommand extends Command {
   private async readMessage(): Promise<number> {
     const id = this.arg;
     if (!id) {
-      console.error(chalk.red('Error: Message ID is required'));
-      console.log(chalk.gray('Usage: skillkit message read <id>'));
+      error('Error: Message ID is required');
+      console.log(colors.muted('Usage: skillkit message read <id>'));
       return 1;
     }
 
@@ -205,13 +205,13 @@ export class MessageCommand extends Command {
           }
         }
 
-        console.error(chalk.red(`Message not found: ${id}`));
+        error(`Message not found: ${id}`);
         return 1;
       }
 
       return this.displayMessage(message);
     } catch (err: any) {
-      console.error(chalk.red(`Failed to read message: ${err.message}`));
+      error(`Failed to read message: ${err.message}`);
       return 1;
     }
   }
@@ -222,22 +222,22 @@ export class MessageCommand extends Command {
       return 0;
     }
 
-    console.log(chalk.bold(`\n${message.subject}\n`));
+    console.log(colors.bold(`\n${message.subject}\n`));
     console.log(`From: ${message.from}`);
     console.log(`To: ${message.to}`);
     console.log(`Date: ${new Date(message.createdAt).toLocaleString()}`);
     console.log(`Priority: ${message.priority}`);
     console.log(`Type: ${message.type}`);
-    console.log(`ID: ${chalk.gray(message.id)}`);
+    console.log(`ID: ${colors.muted(message.id)}`);
 
     if (message.replyTo) {
-      console.log(`Reply to: ${chalk.gray(message.replyTo)}`);
+      console.log(`Reply to: ${colors.muted(message.replyTo)}`);
     }
     if (message.threadId) {
-      console.log(`Thread: ${chalk.gray(message.threadId)}`);
+      console.log(`Thread: ${colors.muted(message.threadId)}`);
     }
 
-    console.log(chalk.bold('\nBody:\n'));
+    console.log(colors.bold('\nBody:\n'));
     if (typeof message.body === 'string') {
       console.log(message.body);
     } else {
@@ -251,14 +251,14 @@ export class MessageCommand extends Command {
   private async replyMessage(): Promise<number> {
     const id = this.arg;
     if (!id) {
-      console.error(chalk.red('Error: Message ID is required'));
-      console.log(chalk.gray('Usage: skillkit message reply <id> --body "..."'));
+      error('Error: Message ID is required');
+      console.log(colors.muted('Usage: skillkit message reply <id> --body "..."'));
       return 1;
     }
 
     if (!this.body) {
-      console.error(chalk.red('Error: Reply body is required'));
-      console.log(chalk.gray('Usage: skillkit message reply <id> --body "..."'));
+      error('Error: Reply body is required');
+      console.log(colors.muted('Usage: skillkit message reply <id> --body "..."'));
       return 1;
     }
 
@@ -276,7 +276,7 @@ export class MessageCommand extends Command {
         if (found) {
           messageId = found.id;
         } else {
-          console.error(chalk.red(`Message not found: ${id}`));
+          error(`Message not found: ${id}`);
           return 1;
         }
       }
@@ -284,19 +284,19 @@ export class MessageCommand extends Command {
       const result = await service.reply(messageId, this.body);
 
       if (result.delivered) {
-        console.log(chalk.green('✓ Reply sent'));
-        console.log(`  ID: ${chalk.gray(result.messageId.slice(0, 8))}`);
+        console.log(colors.success('✓ Reply sent'));
+        console.log(`  ID: ${colors.muted(result.messageId.slice(0, 8))}`);
       } else {
-        console.error(chalk.red('✗ Failed to send reply'));
+        error('✗ Failed to send reply');
         if (result.error) {
-          console.error(chalk.gray(`  Error: ${result.error}`));
+          console.error(colors.muted(`  Error: ${result.error}`));
         }
         return 1;
       }
 
       return 0;
     } catch (err: any) {
-      console.error(chalk.red(`Failed to reply: ${err.message}`));
+      error(`Failed to reply: ${err.message}`);
       return 1;
     }
   }
@@ -304,8 +304,8 @@ export class MessageCommand extends Command {
   private async archiveMessage(): Promise<number> {
     const id = this.arg;
     if (!id) {
-      console.error(chalk.red('Error: Message ID is required'));
-      console.log(chalk.gray('Usage: skillkit message archive <id>'));
+      error('Error: Message ID is required');
+      console.log(colors.muted('Usage: skillkit message archive <id>'));
       return 1;
     }
 
@@ -323,7 +323,7 @@ export class MessageCommand extends Command {
         if (found) {
           messageId = found.id;
         } else {
-          console.error(chalk.red(`Message not found: ${id}`));
+          error(`Message not found: ${id}`);
           return 1;
         }
       }
@@ -331,15 +331,15 @@ export class MessageCommand extends Command {
       const archived = await service.archive(messageId);
 
       if (archived) {
-        console.log(chalk.green('✓ Message archived'));
+        console.log(colors.success('✓ Message archived'));
       } else {
-        console.error(chalk.red('✗ Failed to archive message'));
+        error('✗ Failed to archive message');
         return 1;
       }
 
       return 0;
     } catch (err: any) {
-      console.error(chalk.red(`Failed to archive: ${err.message}`));
+      error(`Failed to archive: ${err.message}`);
       return 1;
     }
   }
@@ -349,14 +349,14 @@ export class MessageCommand extends Command {
     const to = this.arg2;
 
     if (!id) {
-      console.error(chalk.red('Error: Message ID is required'));
-      console.log(chalk.gray('Usage: skillkit message forward <id> <to>'));
+      error('Error: Message ID is required');
+      console.log(colors.muted('Usage: skillkit message forward <id> <to>'));
       return 1;
     }
 
     if (!to) {
-      console.error(chalk.red('Error: Recipient is required'));
-      console.log(chalk.gray('Usage: skillkit message forward <id> <to>'));
+      error('Error: Recipient is required');
+      console.log(colors.muted('Usage: skillkit message forward <id> <to>'));
       return 1;
     }
 
@@ -374,7 +374,7 @@ export class MessageCommand extends Command {
         if (found) {
           messageId = found.id;
         } else {
-          console.error(chalk.red(`Message not found: ${id}`));
+          error(`Message not found: ${id}`);
           return 1;
         }
       }
@@ -382,19 +382,19 @@ export class MessageCommand extends Command {
       const result = await service.forward(messageId, to, this.body);
 
       if (result.delivered) {
-        console.log(chalk.green(`✓ Message forwarded to ${to}`));
-        console.log(`  ID: ${chalk.gray(result.messageId.slice(0, 8))}`);
+        console.log(colors.success(`✓ Message forwarded to ${to}`));
+        console.log(`  ID: ${colors.muted(result.messageId.slice(0, 8))}`);
       } else {
-        console.error(chalk.red('✗ Failed to forward message'));
+        error('✗ Failed to forward message');
         if (result.error) {
-          console.error(chalk.gray(`  Error: ${result.error}`));
+          console.error(colors.muted(`  Error: ${result.error}`));
         }
         return 1;
       }
 
       return 0;
     } catch (err: any) {
-      console.error(chalk.red(`Failed to forward: ${err.message}`));
+      error(`Failed to forward: ${err.message}`);
       return 1;
     }
   }
@@ -418,24 +418,24 @@ export class MessageCommand extends Command {
         return 0;
       }
 
-      console.log(chalk.bold(`\nSent Messages (${messages.length})\n`));
+      console.log(colors.bold(`\nSent Messages (${messages.length})\n`));
 
       if (messages.length === 0) {
-        console.log(chalk.gray('  No sent messages.'));
+        console.log(colors.muted('  No sent messages.'));
         return 0;
       }
 
       for (const message of messages) {
         const priorityIcon = this.getPriorityIcon(message.priority);
 
-        console.log(`${chalk.gray('○')} ${priorityIcon} ${message.subject}`);
-        console.log(`  ID: ${chalk.gray(message.id.slice(0, 8))} | To: ${message.to} | ${this.formatDate(message.createdAt)}`);
+        console.log(`${colors.muted('○')} ${priorityIcon} ${message.subject}`);
+        console.log(`  ID: ${colors.muted(message.id.slice(0, 8))} | To: ${message.to} | ${this.formatDate(message.createdAt)}`);
       }
 
       console.log();
       return 0;
     } catch (err: any) {
-      console.error(chalk.red(`Failed to show sent: ${err.message}`));
+      error(`Failed to show sent: ${err.message}`);
       return 1;
     }
   }
@@ -461,26 +461,26 @@ export class MessageCommand extends Command {
         return 0;
       }
 
-      console.log(chalk.bold('\nMessaging Status\n'));
+      console.log(colors.bold('\nMessaging Status\n'));
 
-      console.log(chalk.cyan('Agent:'));
+      console.log(colors.cyan('Agent:'));
       console.log(`  ID: ${agentId}`);
 
       console.log();
-      console.log(chalk.cyan('Inbox:'));
+      console.log(colors.cyan('Inbox:'));
       console.log(`  Total: ${summary.total}`);
       console.log(`  Unread: ${summary.unread}`);
       console.log(`  By priority: urgent=${summary.byPriority.urgent}, high=${summary.byPriority.high}, normal=${summary.byPriority.normal}, low=${summary.byPriority.low}`);
 
       console.log();
-      console.log(chalk.cyan('Storage:'));
+      console.log(colors.cyan('Storage:'));
       console.log(`  Sent: ${sent.length}`);
       console.log(`  Archived: ${archived.length}`);
 
       console.log();
       return 0;
     } catch (err: any) {
-      console.error(chalk.red(`Failed to get status: ${err.message}`));
+      error(`Failed to get status: ${err.message}`);
       return 1;
     }
   }
@@ -488,13 +488,13 @@ export class MessageCommand extends Command {
   private getPriorityIcon(priority: string): string {
     switch (priority) {
       case 'urgent':
-        return chalk.red('!!!!');
+        return colors.error('!!!!');
       case 'high':
-        return chalk.yellow('!!!');
+        return colors.warning('!!!');
       case 'normal':
-        return chalk.gray('!');
+        return colors.muted('!');
       case 'low':
-        return chalk.gray('·');
+        return colors.muted('·');
       default:
         return '';
     }

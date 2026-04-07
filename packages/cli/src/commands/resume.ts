@@ -1,6 +1,6 @@
 import { Command, Option } from 'clipanion';
 import { resolve } from 'node:path';
-import chalk from 'chalk';
+import { colors, warn, success, error } from '../onboarding/index.js';
 import { SessionManager } from '@skillkit/core';
 
 /**
@@ -36,47 +36,46 @@ export class ResumeCommand extends Command {
     const state = manager.get();
 
     if (!state) {
-      console.log(chalk.yellow('No active session found.'));
+      warn('No active session found.');
       return 1;
     }
 
     if (!state.currentExecution) {
-      console.log(chalk.yellow('No skill execution to resume.'));
-      console.log(chalk.dim('Start a new execution with: skillkit run <skill>'));
+      warn('No skill execution to resume.');
+      console.log(colors.muted('Start a new execution with: skillkit run <skill>'));
       return 1;
     }
 
     if (state.currentExecution.status !== 'paused') {
       if (state.currentExecution.status === 'running') {
-        console.log(chalk.yellow('Execution is already running.'));
+        warn('Execution is already running.');
       } else {
-        console.log(chalk.yellow(`Execution is ${state.currentExecution.status}.`));
+        warn(`Execution is ${state.currentExecution.status}.`);
       }
       return 1;
     }
 
-    const success = manager.resume();
+    const resumed = manager.resume();
 
-    if (success) {
+    if (resumed) {
       const exec = state.currentExecution;
-      console.log(chalk.green('✓ Execution resumed'));
+      success('✓ Execution resumed');
       console.log();
-      console.log(`  Skill: ${chalk.bold(exec.skillName)}`);
+      console.log(`  Skill: ${colors.bold(exec.skillName)}`);
       console.log(`  Progress: ${exec.currentStep}/${exec.totalSteps} tasks`);
       console.log();
 
-      // Show next task
       const nextTask = exec.tasks.find((t) => t.status === 'pending' || t.status === 'in_progress');
       if (nextTask) {
-        console.log(`  Next task: ${chalk.cyan(nextTask.name)}`);
+        console.log(`  Next task: ${colors.cyan(nextTask.name)}`);
       }
 
       console.log();
-      console.log(chalk.dim('The execution will continue from where it left off.'));
-      console.log(chalk.dim('View status: skillkit status'));
+      console.log(colors.muted('The execution will continue from where it left off.'));
+      console.log(colors.muted('View status: skillkit status'));
       return 0;
     } else {
-      console.log(chalk.red('Failed to resume execution.'));
+      error('Failed to resume execution.');
       return 1;
     }
   }

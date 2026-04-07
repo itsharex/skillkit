@@ -133,512 +133,490 @@ export class InstallCommand extends Command {
     const s = spinner();
 
     try {
-      // Show welcome logo for interactive mode
       if (isInteractive && !this.quiet) {
         welcome();
       }
 
-      let providerAdapter = detectProvider(this.source);
-      let result: {
-        success: boolean;
-        path?: string;
-        tempRoot?: string;
-        error?: string;
-        skills?: string[];
-        discoveredSkills?: Array<{
-          name: string;
-          dirName: string;
-          path: string;
-        }>;
-      } | null = null;
+      const { providerAdapter, cloneResult } = await this.resolveSource(s);
+      if (!providerAdapter || !cloneResult) return 1;
 
-      const isUrl =
-        this.source.startsWith("http://") || this.source.startsWith("https://");
-      if (isUrl && !this.provider && !providerAdapter) {
-        s.start("Checking for well-known skills...");
-        const wellKnown = new WellKnownProvider();
-        const discovery = await wellKnown.discoverFromUrl(this.source);
-        if (discovery.success) {
-          s.stop(
-            `Found ${discovery.skills?.length || 0} skill(s) via well-known discovery`,
-          );
-          providerAdapter = wellKnown;
-          result = discovery;
-        } else {
-          s.stop("No well-known skills found");
-          warn(`No well-known skills found at ${this.source}`);
-          console.log(
-            colors.muted("You can save this URL as a skill instead:"),
-          );
-          console.log(colors.muted(`  skillkit save ${this.source}`));
-          return 1;
-        }
-      }
-
-      if (this.provider) {
-        providerAdapter = getProvider(this.provider as GitProvider);
-      }
-
-      if (!providerAdapter) {
-        error(`Could not detect provider for: ${this.source}`);
-        console.log(colors.muted("Use --provider flag or specify source as:"));
-        console.log(
-          colors.muted(
-            "  GitHub:     owner/repo or https://github.com/owner/repo",
-          ),
-        );
-        console.log(
-          colors.muted("  Skills.sh:  skills.sh/owner/repo/skill-name"),
-        );
-        console.log(
-          colors.muted(
-            "  GitLab:     gitlab:owner/repo or https://gitlab.com/owner/repo",
-          ),
-        );
-        console.log(colors.muted("  Bitbucket:  bitbucket:owner/repo"));
-        console.log(colors.muted("  Local:      ./path or ~/path"));
-        return 1;
-      }
-
-      if (!result) {
-        s.start(`Fetching from ${providerAdapter.name}...`);
-        result = await providerAdapter.clone(this.source, "", { depth: 1 });
-
-        if (!result.success || !result.path) {
-          s.stop(colors.error(result.error || "Failed to fetch source"));
-          return 1;
-        }
-
-        s.stop(`Found ${result.skills?.length || 0} skill(s)`);
-      }
-
-      const cloneResult = result!;
       const discoveredSkills = cloneResult.discoveredSkills || [];
 
-      // List mode - just show skills and exit
       if (this.list) {
-        if (discoveredSkills.length === 0) {
-          warn("No skills found in this repository");
-        } else {
-          console.log("");
-          console.log(colors.bold("Available skills:"));
-          console.log("");
-          for (const skill of discoveredSkills) {
-            const quality = evaluateSkillDirectory(skill.path);
-            const qualityBadge = quality
-              ? ` ${formatQualityBadge(quality.overall)}`
-              : "";
-            console.log(
-              `  ${colors.success(symbols.stepActive)} ${colors.primary(skill.name)}${qualityBadge}`,
-            );
-          }
-          console.log("");
-          console.log(
-            colors.muted(`Total: ${discoveredSkills.length} skill(s)`),
-          );
-          console.log(
-            colors.muted("To install: skillkit install <source> --skill=name"),
-          );
-        }
-
-        const cleanupPath = cloneResult.tempRoot || cloneResult.path;
-        if (
-          !isLocalPath(this.source) &&
-          cleanupPath &&
-          existsSync(cleanupPath)
-        ) {
-          rmSync(cleanupPath, { recursive: true, force: true });
-        }
-
-        return 0;
+        return this.listSkills(discoveredSkills, cloneResult);
       }
 
-      let skillsToInstall = discoveredSkills;
+      const skillSelection = await this.selectSkills(discoveredSkills, isInteractive);
+      if (!skillSelection.skills) return skillSelection.exitCode;
+      const skillsToInstall = skillSelection.skills;
 
-      // Non-interactive: use --skills filter
-      if (this.skills) {
-        const requestedSkills = this.skills.split(",").map((s) => s.trim());
-        const available = discoveredSkills.map((s) => s.name);
-        const notFound = requestedSkills.filter((s) => !available.includes(s));
+      const agentSelection = await this.selectAgents(isInteractive);
+      if (!agentSelection.agents) return agentSelection.exitCode;
+      const targetAgents = agentSelection.agents;
 
-        if (notFound.length > 0) {
-          error(`Skills not found: ${notFound.join(", ")}`);
-          console.log(colors.muted(`Available: ${available.join(", ")}`));
-          return 1;
-        }
+      const installMethod = await this.selectMethod(isInteractive, targetAgents);
+      if (!installMethod) return 0;
 
-        skillsToInstall = discoveredSkills.filter((s) =>
-          requestedSkills.includes(s.name),
-        );
-      } else if (this.all || this.yes) {
-        skillsToInstall = discoveredSkills;
-      } else if (isInteractive && discoveredSkills.length > 1) {
-        step(`Source: ${colors.cyan(this.source)}`);
+      await this.runSecurityScan(skillsToInstall, cloneResult);
 
-        const skillResult = await quickSkillSelect({
-          skills: discoveredSkills.map((s) => ({ name: s.name })),
-        });
-
-        if (isCancel(skillResult)) {
-          cancel("Installation cancelled");
-          return 0;
-        }
-
-        const selected = (skillResult as { skills: string[] }).skills;
-        skillsToInstall = discoveredSkills.filter((s) =>
-          selected.includes(s.name),
-        );
-      }
-
-      if (skillsToInstall.length === 0) {
-        warn("No skills to install");
-        return 0;
-      }
-
-      // Determine target agents
-      let targetAgents: AgentType[];
-
-      if (this.agent && this.agent.length > 0) {
-        const allValid = getAllAdapters().map((a) => a.type);
-        const invalid = this.agent.filter(
-          (a) => !allValid.includes(a as AgentType),
-        );
-        if (invalid.length > 0) {
-          error(`Unknown agent(s): ${invalid.join(", ")}`);
-          console.log(colors.muted(`Available: ${allValid.join(", ")}`));
-          return 1;
-        }
-        targetAgents = this.agent as AgentType[];
-      } else if (isInteractive) {
-        const allAgentTypes = getAllAdapters().map((a) => a.type);
-        const lastAgents = getLastAgents();
-
-        step(`Detected ${allAgentTypes.length} agents`);
-
-        const agentResult = await quickAgentSelect({
-          message: "Install to",
-          agents: allAgentTypes,
-          lastSelected: lastAgents,
-        });
-
-        if (isCancel(agentResult)) {
-          cancel("Installation cancelled");
-          return 0;
-        }
-
-        targetAgents = (agentResult as { agents: string[] })
-          .agents as AgentType[];
-
-        // Save selection for next time
-        saveLastAgents(targetAgents);
-      } else {
-        // Non-interactive: use detected agent
-        const detectedAgent = await detectAgent();
-        targetAgents = [detectedAgent];
-      }
-
-      // Interactive: select installation method
-      let installMethod: "symlink" | "copy" = "copy";
-
-      if (isInteractive && targetAgents.length > 1) {
-        const methodResult = await selectInstallMethod({});
-
-        if (isCancel(methodResult)) {
-          cancel("Installation cancelled");
-          return 0;
-        }
-
-        installMethod = methodResult as "symlink" | "copy";
-      }
-
-      // Check for low-quality skills and warn
-      const lowQualitySkills: Array<{
-        name: string;
-        score: number;
-        warnings: string[];
-      }> = [];
-      for (const skill of skillsToInstall) {
-        const quality = evaluateSkillDirectory(skill.path);
-        if (quality && quality.overall < 60) {
-          lowQualitySkills.push({
-            name: skill.name,
-            score: quality.overall,
-            warnings: quality.warnings.slice(0, 2),
-          });
-        }
-      }
-
-      if (this.scan) {
-        const scanner = new SkillScanner({ failOnSeverity: Severity.HIGH });
-        for (const skill of skillsToInstall) {
-          const scanResult = await scanner.scan(skill.path);
-
-          if (scanResult.verdict === "fail" && !this.force) {
-            error(`Security scan FAILED for "${skill.name}"`);
-            console.log(formatSummary(scanResult));
-            console.log(
-              colors.muted(
-                "Use --force to install anyway, or --no-scan to skip scanning",
-              ),
-            );
-
-            const cleanupPath = cloneResult.tempRoot || cloneResult.path;
-            if (
-              !isLocalPath(this.source) &&
-              cleanupPath &&
-              existsSync(cleanupPath)
-            ) {
-              rmSync(cleanupPath, { recursive: true, force: true });
-            }
-            return 1;
-          }
-
-          if (scanResult.verdict === "warn" && !this.quiet) {
-            warn(
-              `Security warnings for "${skill.name}" (${scanResult.stats.medium} medium, ${scanResult.stats.low} low)`,
-            );
-          }
-        }
-      }
-
-      // Confirm installation
       if (isInteractive && !this.yes) {
-        console.log("");
-
-        // Show low-quality warning if any
-        if (lowQualitySkills.length > 0) {
-          console.log(
-            colors.warning(
-              `${symbols.warning} Warning: ${lowQualitySkills.length} skill(s) have low quality scores (< 60)`,
-            ),
-          );
-          for (const lq of lowQualitySkills) {
-            const grade = getQualityGradeFromScore(lq.score);
-            const warningText =
-              lq.warnings.length > 0 ? ` - ${lq.warnings.join(", ")}` : "";
-            console.log(
-              colors.muted(`    - ${lq.name} [${grade}]${warningText}`),
-            );
-          }
-          console.log("");
-        }
-
-        const agentDisplay =
-          targetAgents.length <= 3
-            ? targetAgents.map(formatAgent).join(", ")
-            : `${targetAgents.slice(0, 2).map(formatAgent).join(", ")} +${targetAgents.length - 2} more`;
-
-        const confirmResult = await confirm({
-          message: `Install ${skillsToInstall.length} skill(s) to ${agentDisplay}?`,
-          initialValue: true,
-        });
-
-        if (isCancel(confirmResult) || !confirmResult) {
-          cancel("Installation cancelled");
-          return 0;
-        }
+        const confirmed = await this.confirmInstall(skillsToInstall, targetAgents);
+        if (!confirmed) return 0;
       }
 
-      // Perform installation
-      let totalInstalled = 0;
-      const installResults: InstallResult[] = [];
+      const installResults = await this.performInstall(
+        skillsToInstall, targetAgents, installMethod, providerAdapter, cloneResult, s,
+      );
 
-      for (const skill of skillsToInstall) {
-        const skillName = skill.name;
-        const sourcePath = skill.path;
-        const installedAgents: string[] = [];
-        let primaryPath: string | null = null;
-
-        for (const agentType of targetAgents) {
-          const adapter = getAdapter(agentType);
-          const installDir = getInstallDir(this.global, agentType);
-
-          if (!existsSync(installDir)) {
-            mkdirSync(installDir, { recursive: true });
-          }
-
-          const targetPath = join(installDir, skillName);
-
-          if (existsSync(targetPath) && !this.force) {
-            if (!this.quiet) {
-              warn(
-                `Skipping ${skillName} for ${adapter.name} (already exists, use --force)`,
-              );
-            }
-            continue;
-          }
-
-          const securityRoot = cloneResult.tempRoot || cloneResult.path || "";
-          if (!securityRoot || !isPathInside(sourcePath, securityRoot)) {
-            error(`Skipping ${skillName} (path traversal detected)`);
-            continue;
-          }
-
-          const isSymlinkMode =
-            installMethod === "symlink" && targetAgents.length > 1;
-          const useSymlink = isSymlinkMode && primaryPath !== null;
-
-          s.start(
-            `Installing ${skillName} to ${adapter.name}${useSymlink ? " (symlink)" : ""}...`,
-          );
-
-          try {
-            if (existsSync(targetPath)) {
-              rmSync(targetPath, { recursive: true, force: true });
-            }
-
-            if (useSymlink && primaryPath) {
-              symlinkSync(primaryPath, targetPath, "dir");
-            } else {
-              cpSync(sourcePath, targetPath, {
-                recursive: true,
-                dereference: true,
-              });
-              if (isSymlinkMode && primaryPath === null) {
-                primaryPath = targetPath;
-              }
-
-              // Auto-install npm dependencies if package.json exists
-              const packageJsonPath = join(targetPath, "package.json");
-              if (existsSync(packageJsonPath)) {
-                s.stop(`Installed ${skillName} to ${adapter.name}`);
-                s.start(`Installing npm dependencies for ${skillName}...`);
-                try {
-                  await execFileAsync("npm", ["install", "--omit=dev"], {
-                    cwd: targetPath,
-                  });
-                  s.stop(`Installed dependencies for ${skillName}`);
-                } catch (npmErr) {
-                  s.stop(
-                    colors.warning(`Dependencies failed for ${skillName}`),
-                  );
-                  console.log(
-                    colors.muted("Run manually: npm install in " + targetPath),
-                  );
-                }
-                s.start(`Finishing ${skillName} installation...`);
-              }
-            }
-
-            const metadata: SkillMetadata = {
-              name: skillName,
-              description: "",
-              source: this.source,
-              sourceType: providerAdapter.type,
-              subpath: skillName,
-              installedAt: new Date().toISOString(),
-              enabled: true,
-            };
-            saveSkillMetadata(targetPath, metadata);
-
-            installedAgents.push(agentType);
-            s.stop(
-              `Installed ${skillName} to ${adapter.name}${useSymlink ? " (symlink)" : ""}`,
-            );
-          } catch (err) {
-            s.stop(
-              colors.error(`Failed to install ${skillName} to ${adapter.name}`),
-            );
-            console.log(
-              colors.muted(err instanceof Error ? err.message : String(err)),
-            );
-          }
-        }
-
-        if (installedAgents.length > 0) {
-          totalInstalled++;
-          installResults.push({
-            skillName,
-            method: installMethod,
-            agents: installedAgents,
-            path: join(
-              getInstallDir(this.global, installedAgents[0] as AgentType),
-              skillName,
-            ),
-          });
-        }
-      }
-
-      // Cleanup temp directory
-      const cleanupPath = cloneResult.tempRoot || cloneResult.path;
-      if (!isLocalPath(this.source) && cleanupPath && existsSync(cleanupPath)) {
-        rmSync(cleanupPath, { recursive: true, force: true });
-      }
-
-      if (totalInstalled > 0) {
-        try {
-          const agentsMdPath = join(process.cwd(), "AGENTS.md");
-          if (existsSync(agentsMdPath)) {
-            const parser = new AgentsMdParser();
-            const existing = readFileSync(agentsMdPath, "utf-8");
-            if (parser.hasManagedSections(existing)) {
-              const gen = new AgentsMdGenerator({ projectPath: process.cwd() });
-              const genResult = gen.generate();
-              const updated = parser.updateManagedSections(
-                existing,
-                genResult.sections.filter((s) => s.managed),
-              );
-              writeFileSync(agentsMdPath, updated, "utf-8");
-            }
-          }
-        } catch {
-          warn("Failed to update AGENTS.md");
-        }
-      }
-
-      // Show summary
-      if (totalInstalled > 0) {
-        if (isInteractive) {
-          showInstallSummary({
-            totalSkills: totalInstalled,
-            totalAgents: targetAgents.length,
-            results: installResults,
-            source: this.source,
-          });
-
-          await this.showSkillsShStats(
-            installResults.map((r) => r.skillName),
-            providerAdapter,
-          );
-
-          outro("Installation complete!");
-
-          if (!this.yes) {
-            showNextSteps({
-              skillNames: installResults.map((r) => r.skillName),
-              agentTypes: targetAgents,
-              syncNeeded: true,
-            });
-
-            this.showProTips(installResults.map((r) => r.skillName));
-          }
-        } else {
-          success(
-            `Installed ${totalInstalled} skill(s) to ${targetAgents.length} agent(s)`,
-          );
-          for (const r of installResults) {
-            console.log(
-              colors.muted(
-                `  ${symbols.success} ${r.skillName} ${symbols.arrowRight} ${r.agents.map(getAgentIcon).join(" ")}`,
-              ),
-            );
-          }
-          console.log("");
-          console.log(
-            colors.muted("Run `skillkit sync` to update agent configs"),
-          );
-        }
-      } else {
-        warn("No skills were installed");
-      }
+      this.cleanupTemp(cloneResult);
+      this.updateAgentsMd(installResults.length);
+      await this.showResults(installResults, targetAgents, providerAdapter, isInteractive);
 
       return 0;
     } catch (err) {
       s.stop(colors.error("Installation failed"));
-      console.log(
-        colors.muted(err instanceof Error ? err.message : String(err)),
-      );
+      console.log(colors.muted(err instanceof Error ? err.message : String(err)));
       return 1;
+    }
+  }
+
+  private async resolveSource(s: ReturnType<typeof spinner>): Promise<{
+    providerAdapter: ReturnType<typeof detectProvider> | null;
+    cloneResult: {
+      success: boolean;
+      path?: string;
+      tempRoot?: string;
+      error?: string;
+      skills?: string[];
+      discoveredSkills?: Array<{ name: string; dirName: string; path: string }>;
+    } | null;
+  }> {
+    let providerAdapter = detectProvider(this.source);
+    let result: {
+      success: boolean;
+      path?: string;
+      tempRoot?: string;
+      error?: string;
+      skills?: string[];
+      discoveredSkills?: Array<{ name: string; dirName: string; path: string }>;
+    } | null = null;
+
+    const isUrl = this.source.startsWith("http://") || this.source.startsWith("https://");
+    if (isUrl && !this.provider && !providerAdapter) {
+      s.start("Checking for well-known skills...");
+      const wellKnown = new WellKnownProvider();
+      const discovery = await wellKnown.discoverFromUrl(this.source);
+      if (discovery.success) {
+        s.stop(`Found ${discovery.skills?.length || 0} skill(s) via well-known discovery`);
+        providerAdapter = wellKnown;
+        result = discovery;
+      } else {
+        s.stop("No well-known skills found");
+        warn(`No well-known skills found at ${this.source}`);
+        console.log(colors.muted("You can save this URL as a skill instead:"));
+        console.log(colors.muted(`  skillkit save ${this.source}`));
+        return { providerAdapter: null, cloneResult: null };
+      }
+    }
+
+    if (this.provider) {
+      providerAdapter = getProvider(this.provider as GitProvider);
+    }
+
+    if (!providerAdapter) {
+      error(`Could not detect provider for: ${this.source}`);
+      console.log(colors.muted("Use --provider flag or specify source as:"));
+      console.log(colors.muted("  GitHub:     owner/repo or https://github.com/owner/repo"));
+      console.log(colors.muted("  Skills.sh:  skills.sh/owner/repo/skill-name"));
+      console.log(colors.muted("  GitLab:     gitlab:owner/repo or https://gitlab.com/owner/repo"));
+      console.log(colors.muted("  Bitbucket:  bitbucket:owner/repo"));
+      console.log(colors.muted("  Local:      ./path or ~/path"));
+      return { providerAdapter: null, cloneResult: null };
+    }
+
+    if (!result) {
+      s.start(`Fetching from ${providerAdapter.name}...`);
+      result = await providerAdapter.clone(this.source, "", { depth: 1 });
+
+      if (!result.success || !result.path) {
+        s.stop(colors.error(result.error || "Failed to fetch source"));
+        return { providerAdapter: null, cloneResult: null };
+      }
+
+      s.stop(`Found ${result.skills?.length || 0} skill(s)`);
+    }
+
+    return { providerAdapter, cloneResult: result };
+  }
+
+  private listSkills(
+    discoveredSkills: Array<{ name: string; path: string }>,
+    cloneResult: { tempRoot?: string; path?: string },
+  ): number {
+    if (discoveredSkills.length === 0) {
+      warn("No skills found in this repository");
+    } else {
+      console.log("");
+      console.log(colors.bold("Available skills:"));
+      console.log("");
+      for (const skill of discoveredSkills) {
+        const quality = evaluateSkillDirectory(skill.path);
+        const qualityBadge = quality ? ` ${formatQualityBadge(quality.overall)}` : "";
+        console.log(`  ${colors.success(symbols.stepActive)} ${colors.primary(skill.name)}${qualityBadge}`);
+      }
+      console.log("");
+      console.log(colors.muted(`Total: ${discoveredSkills.length} skill(s)`));
+      console.log(colors.muted("To install: skillkit install <source> --skill=name"));
+    }
+
+    this.cleanupTemp(cloneResult);
+    return 0;
+  }
+
+  private async selectSkills(
+    discoveredSkills: Array<{ name: string; dirName: string; path: string }>,
+    isInteractive: boolean,
+  ): Promise<{ skills: Array<{ name: string; dirName: string; path: string }> | null; exitCode: number }> {
+    if (this.skills) {
+      const requestedSkills = this.skills.split(",").map((s) => s.trim());
+      const available = discoveredSkills.map((s) => s.name);
+      const notFound = requestedSkills.filter((s) => !available.includes(s));
+
+      if (notFound.length > 0) {
+        error(`Skills not found: ${notFound.join(", ")}`);
+        console.log(colors.muted(`Available: ${available.join(", ")}`));
+        return { skills: null, exitCode: 1 };
+      }
+
+      return { skills: discoveredSkills.filter((s) => requestedSkills.includes(s.name)), exitCode: 0 };
+    }
+
+    if (this.all || this.yes) {
+      return { skills: discoveredSkills, exitCode: 0 };
+    }
+
+    if (isInteractive && discoveredSkills.length > 1) {
+      step(`Source: ${colors.cyan(this.source)}`);
+
+      const skillResult = await quickSkillSelect({
+        skills: discoveredSkills.map((s) => ({ name: s.name })),
+      });
+
+      if (isCancel(skillResult)) {
+        cancel("Installation cancelled");
+        return { skills: null, exitCode: 0 };
+      }
+
+      const selected = (skillResult as { skills: string[] }).skills;
+      const result = discoveredSkills.filter((s) => selected.includes(s.name));
+      if (result.length === 0) {
+        warn("No skills to install");
+        return { skills: null, exitCode: 0 };
+      }
+      return { skills: result, exitCode: 0 };
+    }
+
+    return { skills: discoveredSkills, exitCode: 0 };
+  }
+
+  private async selectAgents(isInteractive: boolean): Promise<{ agents: AgentType[] | null; exitCode: number }> {
+    if (this.agent && this.agent.length > 0) {
+      const allValid = getAllAdapters().map((a) => a.type);
+      const invalid = this.agent.filter((a) => !allValid.includes(a as AgentType));
+      if (invalid.length > 0) {
+        error(`Unknown agent(s): ${invalid.join(", ")}`);
+        console.log(colors.muted(`Available: ${allValid.join(", ")}`));
+        return { agents: null, exitCode: 1 };
+      }
+      return { agents: this.agent as AgentType[], exitCode: 0 };
+    }
+
+    if (isInteractive) {
+      const allAgentTypes = getAllAdapters().map((a) => a.type);
+      const lastAgents = getLastAgents();
+
+      step(`Detected ${allAgentTypes.length} agents`);
+
+      const agentResult = await quickAgentSelect({
+        message: "Install to",
+        agents: allAgentTypes,
+        lastSelected: lastAgents,
+      });
+
+      if (isCancel(agentResult)) {
+        cancel("Installation cancelled");
+        return { agents: null, exitCode: 0 };
+      }
+
+      const targetAgents = (agentResult as { agents: string[] }).agents as AgentType[];
+      saveLastAgents(targetAgents);
+      return { agents: targetAgents, exitCode: 0 };
+    }
+
+    const detectedAgent = await detectAgent();
+    return { agents: [detectedAgent], exitCode: 0 };
+  }
+
+  private async selectMethod(
+    isInteractive: boolean,
+    targetAgents: AgentType[],
+  ): Promise<"symlink" | "copy" | null> {
+    if (isInteractive && targetAgents.length > 1) {
+      const methodResult = await selectInstallMethod({});
+
+      if (isCancel(methodResult)) {
+        cancel("Installation cancelled");
+        return null;
+      }
+
+      return methodResult as "symlink" | "copy";
+    }
+    return "copy";
+  }
+
+  private async runSecurityScan(
+    skillsToInstall: Array<{ name: string; path: string }>,
+    cloneResult: { tempRoot?: string; path?: string },
+  ): Promise<void> {
+    if (!this.scan) return;
+
+    const scanner = new SkillScanner({ failOnSeverity: Severity.HIGH });
+    for (const skill of skillsToInstall) {
+      const scanResult = await scanner.scan(skill.path);
+
+      if (scanResult.verdict === "fail" && !this.force) {
+        error(`Security scan FAILED for "${skill.name}"`);
+        console.log(formatSummary(scanResult));
+        console.log(colors.muted("Use --force to install anyway, or --no-scan to skip scanning"));
+        this.cleanupTemp(cloneResult);
+        throw new Error(`Security scan failed for ${skill.name}`);
+      }
+
+      if (scanResult.verdict === "warn" && !this.quiet) {
+        warn(`Security warnings for "${skill.name}" (${scanResult.stats.medium} medium, ${scanResult.stats.low} low)`);
+      }
+    }
+  }
+
+  private async confirmInstall(
+    skillsToInstall: Array<{ name: string; path: string }>,
+    targetAgents: AgentType[],
+  ): Promise<boolean> {
+    console.log("");
+
+    const lowQualitySkills = skillsToInstall
+      .map((skill) => {
+        const quality = evaluateSkillDirectory(skill.path);
+        return quality && quality.overall < 60
+          ? { name: skill.name, score: quality.overall, warnings: quality.warnings.slice(0, 2) }
+          : null;
+      })
+      .filter(Boolean) as Array<{ name: string; score: number; warnings: string[] }>;
+
+    if (lowQualitySkills.length > 0) {
+      console.log(
+        colors.warning(`${symbols.warning} Warning: ${lowQualitySkills.length} skill(s) have low quality scores (< 60)`),
+      );
+      for (const lq of lowQualitySkills) {
+        const grade = getQualityGradeFromScore(lq.score);
+        const warningText = lq.warnings.length > 0 ? ` - ${lq.warnings.join(", ")}` : "";
+        console.log(colors.muted(`    - ${lq.name} [${grade}]${warningText}`));
+      }
+      console.log("");
+    }
+
+    const agentDisplay =
+      targetAgents.length <= 3
+        ? targetAgents.map(formatAgent).join(", ")
+        : `${targetAgents.slice(0, 2).map(formatAgent).join(", ")} +${targetAgents.length - 2} more`;
+
+    const confirmResult = await confirm({
+      message: `Install ${skillsToInstall.length} skill(s) to ${agentDisplay}?`,
+      initialValue: true,
+    });
+
+    if (isCancel(confirmResult) || !confirmResult) {
+      cancel("Installation cancelled");
+      return false;
+    }
+    return true;
+  }
+
+  private async performInstall(
+    skillsToInstall: Array<{ name: string; dirName: string; path: string }>,
+    targetAgents: AgentType[],
+    installMethod: "symlink" | "copy",
+    providerAdapter: ReturnType<typeof detectProvider>,
+    cloneResult: { tempRoot?: string; path?: string },
+    s: ReturnType<typeof spinner>,
+  ): Promise<InstallResult[]> {
+    const installResults: InstallResult[] = [];
+
+    for (const skill of skillsToInstall) {
+      const skillName = skill.name;
+      const sourcePath = skill.path;
+      const installedAgents: string[] = [];
+      let primaryPath: string | null = null;
+
+      for (const agentType of targetAgents) {
+        const adapter = getAdapter(agentType);
+        const installDir = getInstallDir(this.global, agentType);
+
+        if (!existsSync(installDir)) {
+          mkdirSync(installDir, { recursive: true });
+        }
+
+        const targetPath = join(installDir, skillName);
+
+        if (existsSync(targetPath) && !this.force) {
+          if (!this.quiet) {
+            warn(`Skipping ${skillName} for ${adapter.name} (already exists, use --force)`);
+          }
+          continue;
+        }
+
+        const securityRoot = cloneResult.tempRoot || cloneResult.path || "";
+        if (!securityRoot || !isPathInside(sourcePath, securityRoot)) {
+          error(`Skipping ${skillName} (path traversal detected)`);
+          continue;
+        }
+
+        const isSymlinkMode = installMethod === "symlink" && targetAgents.length > 1;
+        const useSymlink = isSymlinkMode && primaryPath !== null;
+
+        s.start(`Installing ${skillName} to ${adapter.name}${useSymlink ? " (symlink)" : ""}...`);
+
+        try {
+          if (existsSync(targetPath)) {
+            rmSync(targetPath, { recursive: true, force: true });
+          }
+
+          if (useSymlink && primaryPath) {
+            symlinkSync(primaryPath, targetPath, "dir");
+          } else {
+            cpSync(sourcePath, targetPath, { recursive: true, dereference: true });
+            if (isSymlinkMode && primaryPath === null) {
+              primaryPath = targetPath;
+            }
+
+            const packageJsonPath = join(targetPath, "package.json");
+            if (existsSync(packageJsonPath)) {
+              s.stop(`Installed ${skillName} to ${adapter.name}`);
+              s.start(`Installing npm dependencies for ${skillName}...`);
+              try {
+                await execFileAsync("npm", ["install", "--omit=dev"], { cwd: targetPath });
+                s.stop(`Installed dependencies for ${skillName}`);
+              } catch {
+                s.stop(colors.warning(`Dependencies failed for ${skillName}`));
+                console.log(colors.muted("Run manually: npm install in " + targetPath));
+              }
+              s.start(`Finishing ${skillName} installation...`);
+            }
+          }
+
+          const metadata: SkillMetadata = {
+            name: skillName,
+            description: "",
+            source: this.source,
+            sourceType: providerAdapter!.type,
+            subpath: skillName,
+            installedAt: new Date().toISOString(),
+            enabled: true,
+          };
+          saveSkillMetadata(targetPath, metadata);
+
+          installedAgents.push(agentType);
+          s.stop(`Installed ${skillName} to ${adapter.name}${useSymlink ? " (symlink)" : ""}`);
+        } catch (err) {
+          s.stop(colors.error(`Failed to install ${skillName} to ${adapter.name}`));
+          console.log(colors.muted(err instanceof Error ? err.message : String(err)));
+        }
+      }
+
+      if (installedAgents.length > 0) {
+        installResults.push({
+          skillName,
+          method: installMethod,
+          agents: installedAgents,
+          path: join(getInstallDir(this.global, installedAgents[0] as AgentType), skillName),
+        });
+      }
+    }
+
+    return installResults;
+  }
+
+  private cleanupTemp(cloneResult: { tempRoot?: string; path?: string }): void {
+    const cleanupPath = cloneResult.tempRoot || cloneResult.path;
+    if (!isLocalPath(this.source) && cleanupPath && existsSync(cleanupPath)) {
+      rmSync(cleanupPath, { recursive: true, force: true });
+    }
+  }
+
+  private updateAgentsMd(totalInstalled: number): void {
+    if (totalInstalled === 0) return;
+    try {
+      const agentsMdPath = join(process.cwd(), "AGENTS.md");
+      if (existsSync(agentsMdPath)) {
+        const parser = new AgentsMdParser();
+        const existing = readFileSync(agentsMdPath, "utf-8");
+        if (parser.hasManagedSections(existing)) {
+          const gen = new AgentsMdGenerator({ projectPath: process.cwd() });
+          const genResult = gen.generate();
+          const updated = parser.updateManagedSections(
+            existing,
+            genResult.sections.filter((s) => s.managed),
+          );
+          writeFileSync(agentsMdPath, updated, "utf-8");
+        }
+      }
+    } catch {
+      warn("Failed to update AGENTS.md");
+    }
+  }
+
+  private async showResults(
+    installResults: InstallResult[],
+    targetAgents: AgentType[],
+    providerAdapter: ReturnType<typeof detectProvider>,
+    isInteractive: boolean,
+  ): Promise<void> {
+    if (installResults.length > 0) {
+      if (isInteractive) {
+        showInstallSummary({
+          totalSkills: installResults.length,
+          totalAgents: targetAgents.length,
+          results: installResults,
+          source: this.source,
+        });
+
+        await this.showSkillsShStats(
+          installResults.map((r) => r.skillName),
+          providerAdapter!,
+        );
+
+        outro("Installation complete!");
+
+        if (!this.yes) {
+          showNextSteps({
+            skillNames: installResults.map((r) => r.skillName),
+            agentTypes: targetAgents,
+            syncNeeded: true,
+          });
+          this.showProTips(installResults.map((r) => r.skillName));
+        }
+      } else {
+        success(`Installed ${installResults.length} skill(s) to ${targetAgents.length} agent(s)`);
+        for (const r of installResults) {
+          console.log(
+            colors.muted(`  ${symbols.success} ${r.skillName} ${symbols.arrowRight} ${r.agents.map(getAgentIcon).join(" ")}`),
+          );
+        }
+        console.log("");
+        console.log(colors.muted("Run `skillkit sync` to update agent configs"));
+      }
+    } else {
+      warn("No skills were installed");
     }
   }
 

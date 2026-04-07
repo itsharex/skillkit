@@ -1,6 +1,6 @@
 import { Command, Option } from 'clipanion';
 import { resolve } from 'node:path';
-import chalk from 'chalk';
+import { colors, success } from '../../onboarding/index.js';
 import { createWorkflowTemplate, saveWorkflow, serializeWorkflow } from '@skillkit/core';
 
 /**
@@ -52,11 +52,11 @@ export class WorkflowCreateCommand extends Command {
 
     const filePath = saveWorkflow(targetPath, workflow);
 
-    console.log(chalk.green(`✓ Created workflow: ${chalk.bold(this.workflowName)}`));
-    console.log(chalk.dim(`  File: ${filePath}`));
+    success(`✓ Created workflow: ${colors.bold(this.workflowName)}`);
+    console.log(colors.muted(`  File: ${filePath}`));
     console.log();
-    console.log(chalk.dim('Edit the workflow file to add skills and configure waves.'));
-    console.log(chalk.dim('Run with: skillkit workflow run ' + this.workflowName));
+    console.log(colors.muted('Edit the workflow file to add skills and configure waves.'));
+    console.log(colors.muted('Run with: skillkit workflow run ' + this.workflowName));
 
     return 0;
   }

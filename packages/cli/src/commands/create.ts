@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import chalk from 'chalk';
+import { colors, success, error, step } from '../onboarding/index.js';
 import { Command, Option } from 'clipanion';
 
 export class CreateCommand extends Command {
@@ -41,8 +41,8 @@ export class CreateCommand extends Command {
     const skillName = this.name.toLowerCase();
 
     if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(skillName)) {
-      console.error(chalk.red('Invalid skill name'));
-      console.error(chalk.dim('Must be lowercase alphanumeric with hyphens (e.g., my-skill)'));
+      error('Invalid skill name');
+      console.log(colors.muted('Must be lowercase alphanumeric with hyphens (e.g., my-skill)'));
       return 1;
     }
 
@@ -50,7 +50,7 @@ export class CreateCommand extends Command {
     const skillDir = join(parentDir, skillName);
 
     if (existsSync(skillDir)) {
-      console.error(chalk.red(`Directory already exists: ${skillDir}`));
+      error(`Directory already exists: ${skillDir}`);
       return 1;
     }
 
@@ -78,24 +78,24 @@ export class CreateCommand extends Command {
         writeFileSync(join(assetsDir, '.gitkeep'), '');
       }
 
-      console.log(chalk.green(`Created skill: ${skillName}`));
+      success(`Created skill: ${skillName}`);
       console.log();
-      console.log(chalk.dim('Structure:'));
-      console.log(chalk.dim(`  ${skillDir}/`));
-      console.log(chalk.dim('  ├── SKILL.md'));
-      if (this.full || this.references) console.log(chalk.dim('  ├── references/'));
-      if (this.full || this.scripts) console.log(chalk.dim('  ├── scripts/'));
-      if (this.full || this.assets) console.log(chalk.dim('  └── assets/'));
+      console.log(colors.muted('Structure:'));
+      console.log(colors.muted(`  ${skillDir}/`));
+      console.log(colors.muted('  ├── SKILL.md'));
+      if (this.full || this.references) console.log(colors.muted('  ├── references/'));
+      if (this.full || this.scripts) console.log(colors.muted('  ├── scripts/'));
+      if (this.full || this.assets) console.log(colors.muted('  └── assets/'));
       console.log();
-      console.log(chalk.cyan('Next steps:'));
-      console.log(chalk.dim('  1. Edit SKILL.md with your instructions'));
-      console.log(chalk.dim('  2. Validate: skillkit validate ' + skillDir));
-      console.log(chalk.dim('  3. Test: skillkit read ' + skillName));
+      step('Next steps:');
+      console.log(colors.muted('  1. Edit SKILL.md with your instructions'));
+      console.log(colors.muted('  2. Validate: skillkit validate ' + skillDir));
+      console.log(colors.muted('  3. Test: skillkit read ' + skillName));
 
       return 0;
-    } catch (error) {
-      console.error(chalk.red('Failed to create skill'));
-      console.error(chalk.dim(error instanceof Error ? error.message : String(error)));
+    } catch (err) {
+      error('Failed to create skill');
+      console.log(colors.muted(err instanceof Error ? err.message : String(err)));
       return 1;
     }
   }

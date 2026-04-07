@@ -4,7 +4,7 @@
  * Manage custom AI sub-agents (e.g., .claude/agents/*.md)
  */
 
-import chalk from 'chalk';
+import { colors } from '../onboarding/index.js';
 import { Command, Option } from 'clipanion';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join, basename } from 'node:path';
@@ -67,7 +67,7 @@ export class AgentCommand extends Command {
   });
 
   async execute(): Promise<number> {
-    console.log(chalk.cyan('Agent management commands:\n'));
+    console.log(colors.cyan('Agent management commands:\n'));
     console.log('  agent list              List all installed agents');
     console.log('  agent show <name>       Show agent details');
     console.log('  agent create <name>     Create a new agent');
@@ -76,7 +76,7 @@ export class AgentCommand extends Command {
     console.log('  agent sync              Sync agents to target AI agent');
     console.log('  agent validate [path]   Validate agent definitions');
     console.log();
-    console.log(chalk.dim('Run `skillkit agent <subcommand> --help` for more info'));
+    console.log(colors.muted('Run `skillkit agent <subcommand> --help` for more info'));
     return 0;
   }
 }
@@ -136,18 +136,18 @@ export class AgentListCommand extends Command {
     }
 
     if (agents.length === 0) {
-      console.log(chalk.yellow('No agents found'));
-      console.log(chalk.dim('Create an agent with: skillkit agent create <name>'));
+      console.log(colors.warning('No agents found'));
+      console.log(colors.muted('Create an agent with: skillkit agent create <name>'));
       return 0;
     }
 
-    console.log(chalk.cyan(`Installed agents (${agents.length}):\n`));
+    console.log(colors.cyan(`Installed agents (${agents.length}):\n`));
 
     const projectAgents = agents.filter((a: CustomAgent) => a.location === 'project');
     const globalAgents = agents.filter((a: CustomAgent) => a.location === 'global');
 
     if (projectAgents.length > 0) {
-      console.log(chalk.blue('Project agents:'));
+      console.log(colors.info('Project agents:'));
       for (const agent of projectAgents) {
         printAgent(agent);
       }
@@ -155,7 +155,7 @@ export class AgentListCommand extends Command {
     }
 
     if (globalAgents.length > 0) {
-      console.log(chalk.dim('Global agents:'));
+      console.log(colors.muted('Global agents:'));
       for (const agent of globalAgents) {
         printAgent(agent);
       }
@@ -163,7 +163,7 @@ export class AgentListCommand extends Command {
     }
 
     console.log(
-      chalk.dim(`${projectAgents.length} project, ${globalAgents.length} global`)
+      colors.muted(`${projectAgents.length} project, ${globalAgents.length} global`)
     );
 
     return 0;
@@ -187,47 +187,47 @@ export class AgentShowCommand extends Command {
     const agent = findAgent(this.name, searchDirs);
 
     if (!agent) {
-      console.log(chalk.red(`Agent not found: ${this.name}`));
+      console.log(colors.error(`Agent not found: ${this.name}`));
       return 1;
     }
 
-    console.log(chalk.cyan(`Agent: ${agent.name}\n`));
-    console.log(`${chalk.dim('Description:')} ${agent.description}`);
-    console.log(`${chalk.dim('Location:')} ${agent.location} (${agent.path})`);
-    console.log(`${chalk.dim('Enabled:')} ${agent.enabled ? chalk.green('yes') : chalk.red('no')}`);
+    console.log(colors.cyan(`Agent: ${agent.name}\n`));
+    console.log(`${colors.muted('Description:')} ${agent.description}`);
+    console.log(`${colors.muted('Location:')} ${agent.location} (${agent.path})`);
+    console.log(`${colors.muted('Enabled:')} ${agent.enabled ? colors.success('yes') : colors.error('no')}`);
 
     const fm = agent.frontmatter;
     if (fm.model) {
-      console.log(`${chalk.dim('Model:')} ${fm.model}`);
+      console.log(`${colors.muted('Model:')} ${fm.model}`);
     }
     if (fm.permissionMode) {
-      console.log(`${chalk.dim('Permission Mode:')} ${fm.permissionMode}`);
+      console.log(`${colors.muted('Permission Mode:')} ${fm.permissionMode}`);
     }
     if (fm.context) {
-      console.log(`${chalk.dim('Context:')} ${fm.context}`);
+      console.log(`${colors.muted('Context:')} ${fm.context}`);
     }
     if (fm.disallowedTools && fm.disallowedTools.length > 0) {
-      console.log(`${chalk.dim('Disallowed Tools:')} ${fm.disallowedTools.join(', ')}`);
+      console.log(`${colors.muted('Disallowed Tools:')} ${fm.disallowedTools.join(', ')}`);
     }
     if (fm.skills && fm.skills.length > 0) {
-      console.log(`${chalk.dim('Skills:')} ${fm.skills.join(', ')}`);
+      console.log(`${colors.muted('Skills:')} ${fm.skills.join(', ')}`);
     }
     if (fm.hooks && fm.hooks.length > 0) {
-      console.log(`${chalk.dim('Hooks:')} ${fm.hooks.length} defined`);
+      console.log(`${colors.muted('Hooks:')} ${fm.hooks.length} defined`);
     }
     if (fm.tags && fm.tags.length > 0) {
-      console.log(`${chalk.dim('Tags:')} ${fm.tags.join(', ')}`);
+      console.log(`${colors.muted('Tags:')} ${fm.tags.join(', ')}`);
     }
     if (fm.author) {
-      console.log(`${chalk.dim('Author:')} ${fm.author}`);
+      console.log(`${colors.muted('Author:')} ${fm.author}`);
     }
     if (fm.version) {
-      console.log(`${chalk.dim('Version:')} ${fm.version}`);
+      console.log(`${colors.muted('Version:')} ${fm.version}`);
     }
 
     console.log();
-    console.log(chalk.dim('Content preview:'));
-    console.log(chalk.dim('─'.repeat(40)));
+    console.log(colors.muted('Content preview:'));
+    console.log(colors.muted('─'.repeat(40)));
     const preview = agent.content.slice(0, 500);
     console.log(preview + (agent.content.length > 500 ? '\n...' : ''));
 
@@ -264,8 +264,8 @@ export class AgentCreateCommand extends Command {
   async execute(): Promise<number> {
     const namePattern = /^[a-z0-9]+(-[a-z0-9]+)*$/;
     if (!namePattern.test(this.name)) {
-      console.log(chalk.red('Invalid agent name: must be lowercase alphanumeric with hyphens'));
-      console.log(chalk.dim('Examples: my-agent, code-reviewer, security-expert'));
+      console.log(colors.error('Invalid agent name: must be lowercase alphanumeric with hyphens'));
+      console.log(colors.muted('Examples: my-agent, code-reviewer, security-expert'));
       return 1;
     }
 
@@ -282,7 +282,7 @@ export class AgentCreateCommand extends Command {
 
     const agentPath = join(targetDir, `${this.name}.md`);
     if (existsSync(agentPath)) {
-      console.log(chalk.red(`Agent already exists: ${agentPath}`));
+      console.log(colors.error(`Agent already exists: ${agentPath}`));
       return 1;
     }
 
@@ -291,10 +291,10 @@ export class AgentCreateCommand extends Command {
 
     writeFileSync(agentPath, content);
 
-    console.log(chalk.green(`Created agent: ${agentPath}`));
+    console.log(colors.success(`Created agent: ${agentPath}`));
     console.log();
-    console.log(chalk.dim('Edit the file to customize the agent system prompt.'));
-    console.log(chalk.dim(`Invoke with: @${this.name}`));
+    console.log(colors.muted('Edit the file to customize the agent system prompt.'));
+    console.log(colors.muted(`Invoke with: @${this.name}`));
 
     return 0;
   }
@@ -360,23 +360,23 @@ export class AgentTranslateCommand extends Command {
         : join(process.cwd(), this.source);
 
       if (!existsSync(sourcePath)) {
-        console.log(chalk.red(`Source path not found: ${sourcePath}`));
+        console.log(colors.error(`Source path not found: ${sourcePath}`));
         return 1;
       }
 
       agents = discoverAgentsFromPath(sourcePath, this.recursive);
 
       if (agents.length === 0) {
-        console.log(chalk.yellow(`No agents found in: ${sourcePath}`));
+        console.log(colors.warning(`No agents found in: ${sourcePath}`));
         if (!this.recursive) {
-          console.log(chalk.dim('Tip: Use --recursive to scan subdirectories'));
+          console.log(colors.muted('Tip: Use --recursive to scan subdirectories'));
         }
         return 0;
       }
     } else if (this.name) {
       const agent = findAgent(this.name, searchDirs);
       if (!agent) {
-        console.log(chalk.red(`Agent not found: ${this.name}`));
+        console.log(colors.error(`Agent not found: ${this.name}`));
         return 1;
       }
       agents = [agent];
@@ -387,13 +387,13 @@ export class AgentTranslateCommand extends Command {
     }
 
     if (agents.length === 0) {
-      console.log(chalk.yellow('No agents found to translate'));
+      console.log(colors.warning('No agents found to translate'));
       return 0;
     }
 
     const outputDir = this.output || getAgentTargetDirectory(process.cwd(), targetAgent);
 
-    console.log(chalk.cyan(`Translating ${agents.length} agent(s) to ${targetAgent} format...\n`));
+    console.log(colors.cyan(`Translating ${agents.length} agent(s) to ${targetAgent} format...\n`));
 
     let successCount = 0;
     let errorCount = 0;
@@ -403,7 +403,7 @@ export class AgentTranslateCommand extends Command {
         const result = translateAgent(agent, targetAgent, { addMetadata: true });
 
         if (!result.success) {
-          console.log(chalk.red(`✗ ${agent.name}: Translation failed`));
+          console.log(colors.error(`✗ ${agent.name}: Translation failed`));
           errorCount++;
           continue;
         }
@@ -411,15 +411,15 @@ export class AgentTranslateCommand extends Command {
         const outputPath = join(outputDir, result.filename);
 
         if (this.dryRun) {
-          console.log(chalk.blue(`Would write: ${outputPath}`));
+          console.log(colors.info(`Would write: ${outputPath}`));
           if (result.warnings.length > 0) {
             for (const warning of result.warnings) {
-              console.log(chalk.yellow(`  ⚠ ${warning}`));
+              console.log(colors.warning(`  ⚠ ${warning}`));
             }
           }
           if (result.incompatible.length > 0) {
             for (const incompat of result.incompatible) {
-              console.log(chalk.dim(`  ○ ${incompat}`));
+              console.log(colors.muted(`  ○ ${incompat}`));
             }
           }
         } else {
@@ -427,21 +427,21 @@ export class AgentTranslateCommand extends Command {
             mkdirSync(outputDir, { recursive: true });
           }
           writeFileSync(outputPath, result.content);
-          console.log(chalk.green(`✓ ${agent.name} → ${outputPath}`));
+          console.log(colors.success(`✓ ${agent.name} → ${outputPath}`));
         }
 
         successCount++;
       } catch (error) {
-        console.log(chalk.red(`✗ ${agent.name}: ${error instanceof Error ? error.message : 'Unknown error'}`));
+        console.log(colors.error(`✗ ${agent.name}: ${error instanceof Error ? error.message : 'Unknown error'}`));
         errorCount++;
       }
     }
 
     console.log();
     if (this.dryRun) {
-      console.log(chalk.dim(`Would translate ${successCount} agent(s)`));
+      console.log(colors.muted(`Would translate ${successCount} agent(s)`));
     } else {
-      console.log(chalk.dim(`Translated ${successCount} agent(s)${errorCount > 0 ? `, ${errorCount} failed` : ''}`));
+      console.log(colors.muted(`Translated ${successCount} agent(s)${errorCount > 0 ? `, ${errorCount} failed` : ''}`));
     }
 
     return errorCount > 0 ? 1 : 0;
@@ -468,7 +468,7 @@ export class AgentSyncCommand extends Command {
     const agents = findAllAgents(searchDirs);
 
     if (agents.length === 0) {
-      console.log(chalk.yellow('No agents found to sync'));
+      console.log(colors.warning('No agents found to sync'));
       return 0;
     }
 
@@ -476,12 +476,12 @@ export class AgentSyncCommand extends Command {
       ? this.agent.split(',').map(a => a.trim() as AgentType)
       : ['claude-code' as AgentType];
 
-    console.log(chalk.cyan(`Syncing ${agents.length} agent(s)...\n`));
+    console.log(colors.cyan(`Syncing ${agents.length} agent(s)...\n`));
 
     for (const targetAgent of targetAgents) {
       const outputDir = getAgentTargetDirectory(process.cwd(), targetAgent);
 
-      console.log(chalk.blue(`→ ${targetAgent} (${outputDir})`));
+      console.log(colors.info(`→ ${targetAgent} (${outputDir})`));
 
       if (!existsSync(outputDir)) {
         mkdirSync(outputDir, { recursive: true });
@@ -492,15 +492,15 @@ export class AgentSyncCommand extends Command {
         if (result.success) {
           const outputPath = join(outputDir, result.filename);
           writeFileSync(outputPath, result.content);
-          console.log(chalk.green(`  ✓ ${agent.name}`));
+          console.log(colors.success(`  ✓ ${agent.name}`));
         } else {
-          console.log(chalk.red(`  ✗ ${agent.name}`));
+          console.log(colors.error(`  ✗ ${agent.name}`));
         }
       }
     }
 
     console.log();
-    console.log(chalk.dim('Sync complete'));
+    console.log(colors.muted('Sync complete'));
 
     return 0;
   }
@@ -535,11 +535,11 @@ export class AgentValidateCommand extends Command {
       const agents = findAllAgents(searchDirs);
 
       if (agents.length === 0) {
-        console.log(chalk.yellow('No agents found'));
+        console.log(colors.warning('No agents found'));
         return 0;
       }
 
-      console.log(chalk.cyan(`Validating ${agents.length} agent(s)...\n`));
+      console.log(colors.cyan(`Validating ${agents.length} agent(s)...\n`));
 
       for (const agent of agents) {
         const result = validateAgent(agent.path);
@@ -547,7 +547,7 @@ export class AgentValidateCommand extends Command {
         if (!result.valid) hasErrors = true;
       }
     } else {
-      console.log(chalk.yellow('Specify a path or use --all to validate all agents'));
+      console.log(colors.warning('Specify a path or use --all to validate all agents'));
       return 1;
     }
 
@@ -556,10 +556,10 @@ export class AgentValidateCommand extends Command {
 }
 
 function printAgent(agent: CustomAgent): void {
-  const status = agent.enabled ? chalk.green('✓') : chalk.red('○');
-  const name = agent.enabled ? agent.name : chalk.dim(agent.name);
-  const model = agent.frontmatter.model ? chalk.blue(`[${agent.frontmatter.model}]`) : '';
-  const desc = chalk.dim(truncate(agent.description, 40));
+  const status = agent.enabled ? colors.success('✓') : colors.error('○');
+  const name = agent.enabled ? agent.name : colors.muted(agent.name);
+  const model = agent.frontmatter.model ? colors.info(`[${agent.frontmatter.model}]`) : '';
+  const desc = colors.muted(truncate(agent.description, 40));
 
   console.log(`  ${status} ${name} ${model}`);
   if (agent.description) {
@@ -572,17 +572,17 @@ function printValidationResult(
   result: { valid: boolean; errors: string[]; warnings: string[] }
 ): void {
   if (result.valid) {
-    console.log(chalk.green(`✓ ${name}`));
+    console.log(colors.success(`✓ ${name}`));
     for (const warning of result.warnings) {
-      console.log(chalk.yellow(`  ⚠ ${warning}`));
+      console.log(colors.warning(`  ⚠ ${warning}`));
     }
   } else {
-    console.log(chalk.red(`✗ ${name}`));
-    for (const error of result.errors) {
-      console.log(chalk.red(`  • ${error}`));
+    console.log(colors.error(`✗ ${name}`));
+    for (const err of result.errors) {
+      console.log(colors.error(`  • ${err}`));
     }
     for (const warning of result.warnings) {
-      console.log(chalk.yellow(`  ⚠ ${warning}`));
+      console.log(colors.warning(`  ⚠ ${warning}`));
     }
   }
 }
@@ -671,15 +671,15 @@ export class AgentInstallCommand extends Command {
     }
 
     if (!this.name) {
-      console.log(chalk.yellow('Please specify an agent name or use --all'));
-      console.log(chalk.dim('Run `skillkit agent available` to see available agents'));
+      console.log(colors.warning('Please specify an agent name or use --all'));
+      console.log(colors.muted('Run `skillkit agent available` to see available agents'));
       return 1;
     }
 
     const agent = getBundledAgent(this.name);
     if (!agent) {
-      console.log(chalk.red(`Bundled agent not found: ${this.name}`));
-      console.log(chalk.dim('Run `skillkit agent available` to see available agents'));
+      console.log(colors.error(`Bundled agent not found: ${this.name}`));
+      console.log(colors.muted('Run `skillkit agent available` to see available agents'));
       return 1;
     }
 
@@ -689,11 +689,11 @@ export class AgentInstallCommand extends Command {
     });
 
     if (result.success) {
-      console.log(chalk.green(`✓ Installed: ${agent.name}`));
-      console.log(chalk.dim(`  Path: ${result.path}`));
-      console.log(chalk.dim(`  Invoke with: @${agent.id}`));
+      console.log(colors.success(`✓ Installed: ${agent.name}`));
+      console.log(colors.muted(`  Path: ${result.path}`));
+      console.log(colors.muted(`  Invoke with: @${agent.id}`));
     } else {
-      console.log(chalk.red(`✗ Failed: ${result.message}`));
+      console.log(colors.error(`✗ Failed: ${result.message}`));
       return 1;
     }
 
@@ -702,7 +702,7 @@ export class AgentInstallCommand extends Command {
 
   private async installAll(): Promise<number> {
     const agents = getBundledAgents();
-    console.log(chalk.cyan(`Installing ${agents.length} bundled agents...\n`));
+    console.log(colors.cyan(`Installing ${agents.length} bundled agents...\n`));
 
     let successCount = 0;
     let skipCount = 0;
@@ -715,20 +715,20 @@ export class AgentInstallCommand extends Command {
       });
 
       if (result.success) {
-        console.log(chalk.green(`  ✓ ${agent.name}`));
+        console.log(colors.success(`  ✓ ${agent.name}`));
         successCount++;
       } else if (result.message.includes('already exists')) {
-        console.log(chalk.yellow(`  ○ ${agent.name} (already installed)`));
+        console.log(colors.warning(`  ○ ${agent.name} (already installed)`));
         skipCount++;
       } else {
-        console.log(chalk.red(`  ✗ ${agent.name}: ${result.message}`));
+        console.log(colors.error(`  ✗ ${agent.name}: ${result.message}`));
         errorCount++;
       }
     }
 
     console.log();
     console.log(
-      chalk.dim(
+      colors.muted(
         `Installed: ${successCount}, Skipped: ${skipCount}, Errors: ${errorCount}`
       )
     );
@@ -781,10 +781,10 @@ export class AgentAvailableCommand extends Command {
 
     if (agents.length === 0) {
       if (this.installed) {
-        console.log(chalk.yellow('No bundled agents installed'));
-        console.log(chalk.dim('Run `skillkit agent install <name>` to install'));
+        console.log(colors.warning('No bundled agents installed'));
+        console.log(colors.muted('Run `skillkit agent install <name>` to install'));
       } else {
-        console.log(chalk.green('All bundled agents are already installed!'));
+        console.log(colors.success('All bundled agents are already installed!'));
       }
       return 0;
     }
@@ -793,7 +793,7 @@ export class AgentAvailableCommand extends Command {
       ? 'Installed Bundled Agents'
       : 'Available Bundled Agents';
 
-    console.log(chalk.cyan(`${title} (${agents.length}):\n`));
+    console.log(colors.cyan(`${title} (${agents.length}):\n`));
 
     const categories = new Map<string, BundledAgent[]>();
     for (const agent of agents) {
@@ -805,20 +805,20 @@ export class AgentAvailableCommand extends Command {
     }
 
     for (const [category, catAgents] of categories) {
-      console.log(chalk.blue(`  ${formatCategoryName(category)}`));
+      console.log(colors.info(`  ${formatCategoryName(category)}`));
       for (const agent of catAgents) {
         const installed = isAgentInstalled(agent.id);
-        const status = installed ? chalk.green('✓') : chalk.dim('○');
-        const model = agent.model ? chalk.blue(`[${agent.model}]`) : '';
-        console.log(`    ${status} ${chalk.bold(agent.id)} ${model}`);
-        console.log(`      ${chalk.dim(agent.description)}`);
+        const status = installed ? colors.success('✓') : colors.muted('○');
+        const model = agent.model ? colors.info(`[${agent.model}]`) : '';
+        console.log(`    ${status} ${colors.bold(agent.id)} ${model}`);
+        console.log(`      ${colors.muted(agent.description)}`);
       }
       console.log();
     }
 
     if (!this.installed) {
-      console.log(chalk.dim('Install with: skillkit agent install <name>'));
-      console.log(chalk.dim('Install all: skillkit agent install --all'));
+      console.log(colors.muted('Install with: skillkit agent install <name>'));
+      console.log(colors.muted('Install all: skillkit agent install --all'));
     }
 
     return 0;
@@ -877,20 +877,20 @@ export class AgentFromSkillCommand extends Command {
     const skill = skills.find((s: Skill) => s.name === this.skillName);
 
     if (!skill) {
-      console.log(chalk.red(`Skill not found: ${this.skillName}`));
-      console.log(chalk.dim('Available skills:'));
+      console.log(colors.error(`Skill not found: ${this.skillName}`));
+      console.log(colors.muted('Available skills:'));
       for (const s of skills.slice(0, 10)) {
-        console.log(chalk.dim(`  - ${s.name}`));
+        console.log(colors.muted(`  - ${s.name}`));
       }
       if (skills.length > 10) {
-        console.log(chalk.dim(`  ... and ${skills.length - 10} more`));
+        console.log(colors.muted(`  ... and ${skills.length - 10} more`));
       }
       return 1;
     }
 
     const skillContent = readSkillContent(skill.path);
     if (!skillContent) {
-      console.log(chalk.red(`Could not read skill content: ${skill.path}`));
+      console.log(colors.error(`Could not read skill content: ${skill.path}`));
       return 1;
     }
 
@@ -901,8 +901,8 @@ export class AgentFromSkillCommand extends Command {
     if (this.model) {
       const validModels = ['sonnet', 'opus', 'haiku', 'inherit'];
       if (!validModels.includes(this.model)) {
-        console.log(chalk.red(`Invalid model: ${this.model}`));
-        console.log(chalk.dim(`Valid options: ${validModels.join(', ')}`));
+        console.log(colors.error(`Invalid model: ${this.model}`));
+        console.log(colors.muted(`Valid options: ${validModels.join(', ')}`));
         return 1;
       }
       options.model = this.model as 'sonnet' | 'opus' | 'haiku' | 'inherit';
@@ -911,8 +911,8 @@ export class AgentFromSkillCommand extends Command {
     if (this.permission) {
       const validModes = ['default', 'plan', 'auto-edit', 'full-auto', 'bypassPermissions'];
       if (!validModes.includes(this.permission)) {
-        console.log(chalk.red(`Invalid permission mode: ${this.permission}`));
-        console.log(chalk.dim(`Valid options: ${validModes.join(', ')}`));
+        console.log(colors.error(`Invalid permission mode: ${this.permission}`));
+        console.log(colors.muted(`Valid options: ${validModes.join(', ')}`));
         return 1;
       }
       options.permissionMode = this.permission as AgentPermissionMode;
@@ -928,16 +928,16 @@ export class AgentFromSkillCommand extends Command {
     if (this.output) {
       const sanitized = sanitizeFilename(this.output);
       if (!sanitized) {
-        console.log(chalk.red(`Invalid output filename: ${this.output}`));
-        console.log(chalk.dim('Filename must contain only alphanumeric characters, hyphens, and underscores'));
+        console.log(colors.error(`Invalid output filename: ${this.output}`));
+        console.log(colors.muted('Filename must contain only alphanumeric characters, hyphens, and underscores'));
         return 1;
       }
       filename = `${sanitized}.md`;
     } else {
       const sanitized = sanitizeFilename(skill.name);
       if (!sanitized) {
-        console.log(chalk.red(`Invalid skill name for filename: ${skill.name}`));
-        console.log(chalk.dim('Skill name must contain only alphanumeric characters, hyphens, and underscores'));
+        console.log(colors.error(`Invalid skill name for filename: ${skill.name}`));
+        console.log(colors.muted('Skill name must contain only alphanumeric characters, hyphens, and underscores'));
         return 1;
       }
       filename = `${sanitized}.md`;
@@ -946,11 +946,11 @@ export class AgentFromSkillCommand extends Command {
     const outputPath = join(targetDir, filename);
 
     if (this.dryRun) {
-      console.log(chalk.cyan('Preview (dry run):\n'));
-      console.log(chalk.dim(`Would write to: ${outputPath}`));
-      console.log(chalk.dim('─'.repeat(50)));
+      console.log(colors.cyan('Preview (dry run):\n'));
+      console.log(colors.muted(`Would write to: ${outputPath}`));
+      console.log(colors.muted('─'.repeat(50)));
       console.log(content);
-      console.log(chalk.dim('─'.repeat(50)));
+      console.log(colors.muted('─'.repeat(50)));
       return 0;
     }
 
@@ -959,18 +959,18 @@ export class AgentFromSkillCommand extends Command {
     }
 
     if (existsSync(outputPath)) {
-      console.log(chalk.yellow(`Overwriting existing file: ${outputPath}`));
+      console.log(colors.warning(`Overwriting existing file: ${outputPath}`));
     }
 
     writeFileSync(outputPath, content);
 
-    console.log(chalk.green(`Created subagent: ${outputPath}`));
+    console.log(colors.success(`Created subagent: ${outputPath}`));
     console.log();
-    console.log(chalk.dim(`Invoke with: @${skill.name}`));
+    console.log(colors.muted(`Invoke with: @${skill.name}`));
     if (!this.inline) {
-      console.log(chalk.dim(`Skills referenced: ${skill.name}`));
+      console.log(colors.muted(`Skills referenced: ${skill.name}`));
     } else {
-      console.log(chalk.dim('Skill content embedded inline'));
+      console.log(colors.muted('Skill content embedded inline'));
     }
 
     return 0;

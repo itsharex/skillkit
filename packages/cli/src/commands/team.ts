@@ -5,7 +5,7 @@
  */
 
 import { Command, Option } from 'clipanion';
-import chalk from 'chalk';
+import { colors } from '../onboarding/index.js';
 import { createTeamManager, createSkillBundle, exportBundle, importBundle } from '@skillkit/core';
 import { join } from 'node:path';
 
@@ -62,23 +62,23 @@ export class TeamCommand extends Command {
         case 'bundle-import':
           return await this.importSkillBundle();
         default:
-          this.context.stderr.write(chalk.red(`Unknown action: ${this.action}\n`));
+          this.context.stderr.write(colors.error(`Unknown action: ${this.action}\n`));
           this.context.stderr.write('Available actions: init, share, import, list, sync, remove, bundle-create, bundle-export, bundle-import\n');
           return 1;
       }
     } catch (err) {
-      this.context.stderr.write(chalk.red(`✗ ${err instanceof Error ? err.message : 'Unknown error'}\n`));
+      this.context.stderr.write(colors.error(`✗ ${err instanceof Error ? err.message : 'Unknown error'}\n`));
       return 1;
     }
   }
 
   private async initTeam(teamManager: ReturnType<typeof createTeamManager>): Promise<number> {
     if (!this.name) {
-      this.context.stderr.write(chalk.red('--name is required for init\n'));
+      this.context.stderr.write(colors.error('--name is required for init\n'));
       return 1;
     }
     if (!this.registry) {
-      this.context.stderr.write(chalk.red('--registry is required for init\n'));
+      this.context.stderr.write(colors.error('--registry is required for init\n'));
       return 1;
     }
 
@@ -87,7 +87,7 @@ export class TeamCommand extends Command {
       registryUrl: this.registry,
     });
 
-    this.context.stdout.write(chalk.green('✓ Team initialized!\n'));
+    this.context.stdout.write(colors.success('✓ Team initialized!\n'));
     this.context.stdout.write(`  Team ID: ${config.teamId}\n`);
     this.context.stdout.write(`  Registry: ${config.registryUrl}\n`);
     return 0;
@@ -96,12 +96,12 @@ export class TeamCommand extends Command {
   private async shareSkill(teamManager: ReturnType<typeof createTeamManager>): Promise<number> {
     const config = teamManager.load();
     if (!config) {
-      this.context.stderr.write(chalk.red('Team not initialized. Run `skillkit team init` first.\n'));
+      this.context.stderr.write(colors.error('Team not initialized. Run `skillkit team init` first.\n'));
       return 1;
     }
 
     if (!this.name) {
-      this.context.stderr.write(chalk.red('--name <skill-name> is required for share\n'));
+      this.context.stderr.write(colors.error('--name <skill-name> is required for share\n'));
       return 1;
     }
 
@@ -111,7 +111,7 @@ export class TeamCommand extends Command {
       tags: this.tags?.split(',').map((t) => t.trim()),
     });
 
-    this.context.stdout.write(chalk.green('✓ Skill shared!\n'));
+    this.context.stdout.write(colors.success('✓ Skill shared!\n'));
     this.context.stdout.write(`  Name: ${shared.name}\n`);
     this.context.stdout.write(`  Version: ${shared.version}\n`);
     this.context.stdout.write(`  Source: ${shared.source}\n`);
@@ -121,12 +121,12 @@ export class TeamCommand extends Command {
   private async importSkill(teamManager: ReturnType<typeof createTeamManager>): Promise<number> {
     const config = teamManager.load();
     if (!config) {
-      this.context.stderr.write(chalk.red('Team not initialized. Run `skillkit team init` first.\n'));
+      this.context.stderr.write(colors.error('Team not initialized. Run `skillkit team init` first.\n'));
       return 1;
     }
 
     if (!this.name) {
-      this.context.stderr.write(chalk.red('--name <skill-name> is required for import\n'));
+      this.context.stderr.write(colors.error('--name <skill-name> is required for import\n'));
       return 1;
     }
 
@@ -136,14 +136,14 @@ export class TeamCommand extends Command {
     });
 
     if (!result.success) {
-      this.context.stderr.write(chalk.red(`✗ ${result.error}\n`));
+      this.context.stderr.write(colors.error(`✗ ${result.error}\n`));
       return 1;
     }
 
     if (this.dryRun) {
-      this.context.stdout.write(chalk.cyan(`[dry-run] Would import to: ${result.path}\n`));
+      this.context.stdout.write(colors.cyan(`[dry-run] Would import to: ${result.path}\n`));
     } else {
-      this.context.stdout.write(chalk.green(`✓ Skill imported to: ${result.path}\n`));
+      this.context.stdout.write(colors.success(`✓ Skill imported to: ${result.path}\n`));
     }
     return 0;
   }
@@ -151,14 +151,14 @@ export class TeamCommand extends Command {
   private async listSkills(teamManager: ReturnType<typeof createTeamManager>): Promise<number> {
     const config = teamManager.load();
     if (!config) {
-      this.context.stderr.write(chalk.red('Team not initialized. Run `skillkit team init` first.\n'));
+      this.context.stderr.write(colors.error('Team not initialized. Run `skillkit team init` first.\n'));
       return 1;
     }
 
     const skills = teamManager.listSharedSkills();
 
-    this.context.stdout.write(chalk.cyan(`Team: ${config.teamName}\n`));
-    this.context.stdout.write(chalk.gray(`Registry: ${config.registryUrl}\n\n`));
+    this.context.stdout.write(colors.cyan(`Team: ${config.teamName}\n`));
+    this.context.stdout.write(colors.muted(`Registry: ${config.registryUrl}\n\n`));
 
     if (skills.length === 0) {
       this.context.stdout.write('No shared skills yet. Use `skillkit team share` to share a skill.\n');
@@ -167,9 +167,9 @@ export class TeamCommand extends Command {
 
     this.context.stdout.write(`Shared Skills (${skills.length}):\n`);
     for (const skill of skills) {
-      this.context.stdout.write(chalk.cyan(`  ${skill.name}`) + ` v${skill.version}\n`);
+      this.context.stdout.write(colors.cyan(`  ${skill.name}`) + ` v${skill.version}\n`);
       if (skill.description) {
-        this.context.stdout.write(chalk.gray(`    ${skill.description}\n`));
+        this.context.stdout.write(colors.muted(`    ${skill.description}\n`));
       }
       this.context.stdout.write(`    by ${skill.author} | ${skill.downloads || 0} downloads\n`);
     }
@@ -180,7 +180,7 @@ export class TeamCommand extends Command {
   private async syncTeam(teamManager: ReturnType<typeof createTeamManager>): Promise<number> {
     const config = teamManager.load();
     if (!config) {
-      this.context.stderr.write(chalk.red('Team not initialized. Run `skillkit team init` first.\n'));
+      this.context.stderr.write(colors.error('Team not initialized. Run `skillkit team init` first.\n'));
       return 1;
     }
 
@@ -188,7 +188,7 @@ export class TeamCommand extends Command {
 
     const result = await teamManager.sync();
 
-    this.context.stdout.write(chalk.green('✓ Sync complete!\n'));
+    this.context.stdout.write(colors.success('✓ Sync complete!\n'));
     if (result.added.length > 0) {
       this.context.stdout.write(`  Added: ${result.added.join(', ')}\n`);
     }
@@ -205,39 +205,39 @@ export class TeamCommand extends Command {
   private async removeSkill(teamManager: ReturnType<typeof createTeamManager>): Promise<number> {
     const config = teamManager.load();
     if (!config) {
-      this.context.stderr.write(chalk.red('Team not initialized. Run `skillkit team init` first.\n'));
+      this.context.stderr.write(colors.error('Team not initialized. Run `skillkit team init` first.\n'));
       return 1;
     }
 
     if (!this.name) {
-      this.context.stderr.write(chalk.red('--name <skill-name> is required for remove\n'));
+      this.context.stderr.write(colors.error('--name <skill-name> is required for remove\n'));
       return 1;
     }
 
     const removed = teamManager.removeSkill(this.name);
     if (!removed) {
-      this.context.stderr.write(chalk.red(`Skill "${this.name}" not found in team registry.\n`));
+      this.context.stderr.write(colors.error(`Skill "${this.name}" not found in team registry.\n`));
       return 1;
     }
 
-    this.context.stdout.write(chalk.green(`✓ Skill "${this.name}" removed from team registry.\n`));
+    this.context.stdout.write(colors.success(`✓ Skill "${this.name}" removed from team registry.\n`));
     return 0;
   }
 
   private async createBundle(teamManager: ReturnType<typeof createTeamManager>): Promise<number> {
     const config = teamManager.load();
     if (!config) {
-      this.context.stderr.write(chalk.red('Team not initialized. Run `skillkit team init` first.\n'));
+      this.context.stderr.write(colors.error('Team not initialized. Run `skillkit team init` first.\n'));
       return 1;
     }
 
     if (!this.name) {
-      this.context.stderr.write(chalk.red('--name <bundle-name> is required for bundle-create\n'));
+      this.context.stderr.write(colors.error('--name <bundle-name> is required for bundle-create\n'));
       return 1;
     }
 
     if (!this.skills) {
-      this.context.stderr.write(chalk.red('--skills <skill1,skill2,...> is required for bundle-create\n'));
+      this.context.stderr.write(colors.error('--skills <skill1,skill2,...> is required for bundle-create\n'));
       return 1;
     }
 
@@ -254,14 +254,14 @@ export class TeamCommand extends Command {
       try {
         bundle.addSkill(skillPath);
         addedCount++;
-        this.context.stdout.write(chalk.gray(`  + ${skillName}\n`));
+        this.context.stdout.write(colors.muted(`  + ${skillName}\n`));
       } catch (err) {
-        this.context.stderr.write(chalk.yellow(`  ⚠ Skipping ${skillName}: ${err instanceof Error ? err.message : 'Unknown error'}\n`));
+        this.context.stderr.write(colors.warning(`  ⚠ Skipping ${skillName}: ${err instanceof Error ? err.message : 'Unknown error'}\n`));
       }
     }
 
     if (addedCount === 0) {
-      this.context.stderr.write(chalk.red('No skills were added to the bundle.\n'));
+      this.context.stderr.write(colors.error('No skills were added to the bundle.\n'));
       return 1;
     }
 
@@ -270,11 +270,11 @@ export class TeamCommand extends Command {
     const result = exportBundle(bundle, outputPath);
 
     if (!result.success) {
-      this.context.stderr.write(chalk.red(`✗ ${result.error}\n`));
+      this.context.stderr.write(colors.error(`✗ ${result.error}\n`));
       return 1;
     }
 
-    this.context.stdout.write(chalk.green(`\n✓ Bundle "${this.name}" created with ${addedCount} skills!\n`));
+    this.context.stdout.write(colors.success(`\n✓ Bundle "${this.name}" created with ${addedCount} skills!\n`));
     this.context.stdout.write(`  Checksum: ${bundle.getChecksum()}\n`);
     this.context.stdout.write(`  Output: ${result.path}\n`);
     return 0;
@@ -283,17 +283,17 @@ export class TeamCommand extends Command {
   private async exportSkillBundle(teamManager: ReturnType<typeof createTeamManager>): Promise<number> {
     const config = teamManager.load();
     if (!config) {
-      this.context.stderr.write(chalk.red('Team not initialized. Run `skillkit team init` first.\n'));
+      this.context.stderr.write(colors.error('Team not initialized. Run `skillkit team init` first.\n'));
       return 1;
     }
 
     if (!this.name) {
-      this.context.stderr.write(chalk.red('--name <bundle-name> is required for bundle-export\n'));
+      this.context.stderr.write(colors.error('--name <bundle-name> is required for bundle-export\n'));
       return 1;
     }
 
     if (!this.output) {
-      this.context.stderr.write(chalk.red('--output <path> is required for bundle-export\n'));
+      this.context.stderr.write(colors.error('--output <path> is required for bundle-export\n'));
       return 1;
     }
 
@@ -303,7 +303,7 @@ export class TeamCommand extends Command {
     // Check if bundle exists
     const { existsSync, readFileSync, writeFileSync } = await import('node:fs');
     if (!existsSync(bundlePath)) {
-      this.context.stderr.write(chalk.red(`Bundle "${this.name}" not found. Create it first with bundle-create.\n`));
+      this.context.stderr.write(colors.error(`Bundle "${this.name}" not found. Create it first with bundle-create.\n`));
       return 1;
     }
 
@@ -311,19 +311,19 @@ export class TeamCommand extends Command {
     const content = readFileSync(bundlePath, 'utf-8');
     writeFileSync(this.output, content, 'utf-8');
 
-    this.context.stdout.write(chalk.green(`✓ Bundle exported to: ${this.output}\n`));
+    this.context.stdout.write(colors.success(`✓ Bundle exported to: ${this.output}\n`));
     return 0;
   }
 
   private async importSkillBundle(): Promise<number> {
     if (!this.source) {
-      this.context.stderr.write(chalk.red('--source <path> is required for bundle-import\n'));
+      this.context.stderr.write(colors.error('--source <path> is required for bundle-import\n'));
       return 1;
     }
 
     const { existsSync } = await import('node:fs');
     if (!existsSync(this.source)) {
-      this.context.stderr.write(chalk.red(`Bundle file not found: ${this.source}\n`));
+      this.context.stderr.write(colors.error(`Bundle file not found: ${this.source}\n`));
       return 1;
     }
 
@@ -331,28 +331,28 @@ export class TeamCommand extends Command {
     const skillsDir = join(projectPath, 'skills');
 
     if (this.dryRun) {
-      this.context.stdout.write(chalk.cyan('[dry-run] Would import bundle to: ' + skillsDir + '\n'));
+      this.context.stdout.write(colors.cyan('[dry-run] Would import bundle to: ' + skillsDir + '\n'));
       return 0;
     }
 
     const result = importBundle(this.source, skillsDir, { overwrite: this.overwrite });
 
     if (!result.success && result.imported.length === 0) {
-      this.context.stderr.write(chalk.red('✗ Failed to import bundle:\n'));
+      this.context.stderr.write(colors.error('✗ Failed to import bundle:\n'));
       for (const error of result.errors) {
-        this.context.stderr.write(chalk.red(`  - ${error}\n`));
+        this.context.stderr.write(colors.error(`  - ${error}\n`));
       }
       return 1;
     }
 
-    this.context.stdout.write(chalk.green(`✓ Imported ${result.imported.length} skills from bundle!\n`));
+    this.context.stdout.write(colors.success(`✓ Imported ${result.imported.length} skills from bundle!\n`));
     for (const name of result.imported) {
-      this.context.stdout.write(chalk.gray(`  + ${name}\n`));
+      this.context.stdout.write(colors.muted(`  + ${name}\n`));
     }
     if (result.errors.length > 0) {
-      this.context.stdout.write(chalk.yellow('\nWarnings:\n'));
+      this.context.stdout.write(colors.warning('\nWarnings:\n'));
       for (const error of result.errors) {
-        this.context.stdout.write(chalk.yellow(`  - ${error}\n`));
+        this.context.stdout.write(colors.warning(`  - ${error}\n`));
       }
     }
     return 0;

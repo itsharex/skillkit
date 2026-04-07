@@ -1,7 +1,7 @@
 import { Command, Option } from 'clipanion';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import chalk from 'chalk';
+import { colors } from '../onboarding/index.js';
 import {
   type AgentType,
   type ProjectContext,
@@ -103,8 +103,8 @@ export class ContextCommand extends Command {
       case 'agents':
         return this.listAgents();
       default:
-        console.error(chalk.red(`Unknown action: ${action}`));
-        console.log(chalk.gray('Available actions: init, show, export, import, sync, detect, agents'));
+        console.error(colors.error(`Unknown action: ${action}`));
+        console.log(colors.muted('Available actions: init, show, export, import, sync, detect, agents'));
         return 1;
     }
   }
@@ -116,16 +116,16 @@ export class ContextCommand extends Command {
     const manager = new ContextManager(process.cwd());
 
     if (manager.exists() && !this.force) {
-      console.log(chalk.yellow('Context already exists. Use --force to reinitialize.'));
+      console.log(colors.warning('Context already exists. Use --force to reinitialize.'));
       return this.showContext();
     }
 
-    console.log(chalk.cyan('Initializing project context...\n'));
+    console.log(colors.cyan('Initializing project context...\n'));
 
     const context = manager.init({ force: this.force });
 
-    console.log(chalk.green('✓ Context initialized\n'));
-    console.log(chalk.gray(`  Location: .skillkit/context.yaml\n`));
+    console.log(colors.success('✓ Context initialized\n'));
+    console.log(colors.muted(`  Location: .skillkit/context.yaml\n`));
 
     // Show summary
     this.printContextSummary(context);
@@ -134,9 +134,9 @@ export class ContextCommand extends Command {
     const sync = createContextSync(process.cwd());
     const detected = sync.detectAgents();
     if (detected.length > 0) {
-      console.log(chalk.cyan('\nDetected agents:'));
+      console.log(colors.cyan('\nDetected agents:'));
       for (const agent of detected) {
-        console.log(`  ${chalk.green('•')} ${agent}`);
+        console.log(`  ${colors.success('•')} ${agent}`);
       }
 
       // Update context with detected agents
@@ -146,7 +146,7 @@ export class ContextCommand extends Command {
       });
     }
 
-    console.log(chalk.gray('\nRun `skillkit context sync` to sync skills to all agents.'));
+    console.log(colors.muted('\nRun `skillkit context sync` to sync skills to all agents.'));
 
     return 0;
   }
@@ -159,7 +159,7 @@ export class ContextCommand extends Command {
     const context = manager.load();
 
     if (!context) {
-      console.log(chalk.yellow('No context found. Run `skillkit context init` first.'));
+      console.log(colors.warning('No context found. Run `skillkit context init` first.'));
       return 1;
     }
 
@@ -171,8 +171,8 @@ export class ContextCommand extends Command {
     this.printContextSummary(context);
 
     if (this.verbose) {
-      console.log(chalk.gray('\nFull context:'));
-      console.log(chalk.gray(JSON.stringify(context, null, 2)));
+      console.log(colors.muted('\nFull context:'));
+      console.log(colors.muted(JSON.stringify(context, null, 2)));
     }
 
     return 0;
@@ -186,7 +186,7 @@ export class ContextCommand extends Command {
     const context = manager.get();
 
     if (!context) {
-      console.error(chalk.red('No context found. Run `skillkit context init` first.'));
+      console.error(colors.error('No context found. Run `skillkit context init` first.'));
       return 1;
     }
 
@@ -200,12 +200,12 @@ export class ContextCommand extends Command {
     if (this.output) {
       const outputPath = resolve(this.output);
       if (existsSync(outputPath) && !this.force) {
-        console.error(chalk.red(`File exists: ${outputPath}. Use --force to overwrite.`));
+        console.error(colors.error(`File exists: ${outputPath}. Use --force to overwrite.`));
         return 1;
       }
 
       writeFileSync(outputPath, content, 'utf-8');
-      console.log(chalk.green(`✓ Context exported to ${outputPath}`));
+      console.log(colors.success(`✓ Context exported to ${outputPath}`));
     } else {
       // Print to stdout
       console.log(content);
@@ -219,13 +219,13 @@ export class ContextCommand extends Command {
    */
   private async importContext(): Promise<number> {
     if (!this.input) {
-      console.error(chalk.red('Error: --input/-i file path is required'));
+      console.error(colors.error('Error: --input/-i file path is required'));
       return 1;
     }
 
     const inputPath = resolve(this.input);
     if (!existsSync(inputPath)) {
-      console.error(chalk.red(`File not found: ${inputPath}`));
+      console.error(colors.error(`File not found: ${inputPath}`));
       return 1;
     }
 
@@ -238,11 +238,11 @@ export class ContextCommand extends Command {
         overwrite: this.force,
       });
 
-      console.log(chalk.green('✓ Context imported successfully'));
+      console.log(colors.success('✓ Context imported successfully'));
       this.printContextSummary(context);
       return 0;
     } catch (error) {
-      console.error(chalk.red(`Import failed: ${error}`));
+      console.error(colors.error(`Import failed: ${error}`));
       return 1;
     }
   }
@@ -255,13 +255,13 @@ export class ContextCommand extends Command {
     const context = manager.get();
 
     if (!context) {
-      console.log(chalk.yellow('No context found. Initializing...'));
+      console.log(colors.warning('No context found. Initializing...'));
       manager.init();
     }
 
     const sync = createContextSync(process.cwd());
 
-    console.log(chalk.cyan('Syncing skills across agents...\n'));
+    console.log(colors.cyan('Syncing skills across agents...\n'));
 
     // Determine target agents
     const agents = this.agent ? [this.agent as AgentType] : undefined;
@@ -274,33 +274,33 @@ export class ContextCommand extends Command {
 
     // Print results
     for (const result of report.results) {
-      const status = result.success ? chalk.green('✓') : chalk.red('✗');
+      const status = result.success ? colors.success('✓') : colors.error('✗');
       console.log(`${status} ${result.agent}: ${result.skillsSynced} synced, ${result.skillsSkipped} skipped`);
 
       if (this.verbose && result.files.length > 0) {
         for (const file of result.files) {
-          console.log(chalk.gray(`    → ${file}`));
+          console.log(colors.muted(`    → ${file}`));
         }
       }
 
       if (result.warnings.length > 0) {
         for (const warning of result.warnings) {
-          console.log(chalk.yellow(`    ⚠ ${warning}`));
+          console.log(colors.warning(`    ⚠ ${warning}`));
         }
       }
 
       if (result.errors.length > 0) {
         for (const error of result.errors) {
-          console.log(chalk.red(`    ✗ ${error}`));
+          console.log(colors.error(`    ✗ ${error}`));
         }
       }
     }
 
     console.log();
-    console.log(chalk.bold(`Summary: ${report.successfulAgents}/${report.totalAgents} agents, ${report.totalSkills} skills`));
+    console.log(colors.bold(`Summary: ${report.successfulAgents}/${report.totalAgents} agents, ${report.totalSkills} skills`));
 
     if (this.dryRun) {
-      console.log(chalk.gray('\n(Dry run - no files were written)'));
+      console.log(colors.muted('\n(Dry run - no files were written)'));
     }
 
     return report.successfulAgents === report.totalAgents ? 0 : 1;
@@ -310,86 +310,86 @@ export class ContextCommand extends Command {
    * Detect project stack
    */
   private async detectProject(): Promise<number> {
-    console.log(chalk.cyan('Analyzing project...\n'));
+    console.log(colors.cyan('Analyzing project...\n'));
 
     const stack = analyzeProject(process.cwd());
     const tags = getStackTags(stack);
 
     // Languages
     if (stack.languages.length > 0) {
-      console.log(chalk.bold('Languages:'));
+      console.log(colors.bold('Languages:'));
       for (const lang of stack.languages) {
         const version = lang.version ? ` (${lang.version})` : '';
-        console.log(`  ${chalk.green('•')} ${lang.name}${version}`);
+        console.log(`  ${colors.success('•')} ${lang.name}${version}`);
       }
       console.log();
     }
 
     // Frameworks
     if (stack.frameworks.length > 0) {
-      console.log(chalk.bold('Frameworks:'));
+      console.log(colors.bold('Frameworks:'));
       for (const fw of stack.frameworks) {
         const version = fw.version ? ` (${fw.version})` : '';
-        console.log(`  ${chalk.green('•')} ${fw.name}${version}`);
+        console.log(`  ${colors.success('•')} ${fw.name}${version}`);
       }
       console.log();
     }
 
     // Libraries
     if (stack.libraries.length > 0) {
-      console.log(chalk.bold('Libraries:'));
+      console.log(colors.bold('Libraries:'));
       for (const lib of stack.libraries) {
         const version = lib.version ? ` (${lib.version})` : '';
-        console.log(`  ${chalk.green('•')} ${lib.name}${version}`);
+        console.log(`  ${colors.success('•')} ${lib.name}${version}`);
       }
       console.log();
     }
 
     // Styling
     if (stack.styling.length > 0) {
-      console.log(chalk.bold('Styling:'));
+      console.log(colors.bold('Styling:'));
       for (const style of stack.styling) {
-        console.log(`  ${chalk.green('•')} ${style.name}`);
+        console.log(`  ${colors.success('•')} ${style.name}`);
       }
       console.log();
     }
 
     // Testing
     if (stack.testing.length > 0) {
-      console.log(chalk.bold('Testing:'));
+      console.log(colors.bold('Testing:'));
       for (const test of stack.testing) {
-        console.log(`  ${chalk.green('•')} ${test.name}`);
+        console.log(`  ${colors.success('•')} ${test.name}`);
       }
       console.log();
     }
 
     // Databases
     if (stack.databases.length > 0) {
-      console.log(chalk.bold('Databases:'));
+      console.log(colors.bold('Databases:'));
       for (const db of stack.databases) {
-        console.log(`  ${chalk.green('•')} ${db.name}`);
+        console.log(`  ${colors.success('•')} ${db.name}`);
       }
       console.log();
     }
 
     // Tools
     if (stack.tools.length > 0) {
-      console.log(chalk.bold('Tools:'));
+      console.log(colors.bold('Tools:'));
       for (const tool of stack.tools) {
-        console.log(`  ${chalk.green('•')} ${tool.name}`);
+        console.log(`  ${colors.success('•')} ${tool.name}`);
       }
       console.log();
     }
 
     // Tags
     if (tags.length > 0) {
-      console.log(chalk.bold('Recommended skill tags:'));
-      console.log(`  ${chalk.cyan(tags.join(', '))}`);
+      console.log(colors.bold('Recommended skill tags:'));
+      console.log(`  ${colors.cyan(tags.join(', '))}`);
       console.log();
     }
 
     if (this.json) {
-      console.log(chalk.gray('\nJSON:'));
+      console.log(colors.muted('\nJSON:'));
       console.log(JSON.stringify(stack, null, 2));
     }
 
@@ -405,27 +405,27 @@ export class ContextCommand extends Command {
     const status = sync.checkStatus();
     const adapters = getAllAdapters();
 
-    console.log(chalk.bold('\nAgent Status:\n'));
+    console.log(colors.bold('\nAgent Status:\n'));
 
     for (const [agent, info] of Object.entries(status)) {
       const adapter = adapters.find(a => a.type === agent);
       const name = adapter?.name || agent;
       const isDetected = detected.includes(agent as AgentType);
 
-      const statusIcon = info.hasSkills ? chalk.green('●') : isDetected ? chalk.yellow('○') : chalk.gray('○');
-      const skillInfo = info.skillCount > 0 ? chalk.gray(` (${info.skillCount} skills)`) : '';
+      const statusIcon = info.hasSkills ? colors.success('●') : isDetected ? colors.warning('○') : colors.muted('○');
+      const skillInfo = info.skillCount > 0 ? colors.muted(` (${info.skillCount} skills)`) : '';
 
-      console.log(`  ${statusIcon} ${name.padEnd(20)} ${chalk.gray(agent)}${skillInfo}`);
+      console.log(`  ${statusIcon} ${name.padEnd(20)} ${colors.muted(agent)}${skillInfo}`);
 
       if (this.verbose && info.skills.length > 0) {
         for (const skill of info.skills) {
-          console.log(chalk.gray(`      └─ ${skill}`));
+          console.log(colors.muted(`      └─ ${skill}`));
         }
       }
     }
 
     console.log();
-    console.log(chalk.gray('Legend: ● has skills, ○ detected/configured, ○ not detected'));
+    console.log(colors.muted('Legend: ● has skills, ○ detected/configured, ○ not detected'));
     console.log();
 
     return 0;
@@ -435,8 +435,8 @@ export class ContextCommand extends Command {
    * Print context summary
    */
   private printContextSummary(context: ProjectContext): void {
-    console.log(chalk.bold('Project:'));
-    console.log(`  Name: ${chalk.cyan(context.project.name)}`);
+    console.log(colors.bold('Project:'));
+    console.log(`  Name: ${colors.cyan(context.project.name)}`);
     if (context.project.type) {
       console.log(`  Type: ${context.project.type}`);
     }
@@ -460,32 +460,30 @@ export class ContextCommand extends Command {
     }
 
     if (stackItems.length > 0) {
-      console.log(`\n${chalk.bold('Stack:')} ${stackItems.join(', ')}`);
+      console.log(`\n${colors.bold('Stack:')} ${stackItems.join(', ')}`);
 
-      // Show top items
       const topFrameworks = context.stack.frameworks.slice(0, 3).map(f => f.name);
       if (topFrameworks.length > 0) {
-        console.log(`  Frameworks: ${chalk.cyan(topFrameworks.join(', '))}`);
+        console.log(`  Frameworks: ${colors.cyan(topFrameworks.join(', '))}`);
       }
 
       const topLibs = context.stack.libraries.slice(0, 3).map(l => l.name);
       if (topLibs.length > 0) {
-        console.log(`  Libraries: ${chalk.cyan(topLibs.join(', '))}`);
+        console.log(`  Libraries: ${colors.cyan(topLibs.join(', '))}`);
       }
     }
 
     // Skills summary
     if (context.skills) {
-      console.log(`\n${chalk.bold('Skills:')}`);
+      console.log(`\n${colors.bold('Skills:')}`);
       console.log(`  Installed: ${context.skills.installed?.length || 0}`);
       console.log(`  Auto-sync: ${context.skills.autoSync ? 'enabled' : 'disabled'}`);
     }
 
-    // Agents summary
     if (context.agents) {
-      console.log(`\n${chalk.bold('Agents:')}`);
+      console.log(`\n${colors.bold('Agents:')}`);
       if (context.agents.primary) {
-        console.log(`  Primary: ${chalk.cyan(context.agents.primary)}`);
+        console.log(`  Primary: ${colors.cyan(context.agents.primary)}`);
       }
       if (context.agents.synced?.length) {
         console.log(`  Synced: ${context.agents.synced.join(', ')}`);

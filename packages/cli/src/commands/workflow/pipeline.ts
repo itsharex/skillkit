@@ -1,5 +1,5 @@
 import { Command, Option } from 'clipanion';
-import chalk from 'chalk';
+import { colors, warn, success, error, step } from '../../onboarding/index.js';
 import {
   BUILTIN_PIPELINES,
   getBuiltinPipeline,
@@ -31,21 +31,21 @@ export class WorkflowPipelineCommand extends Command {
 
   async execute(): Promise<number> {
     if (!this.pipeline) {
-      console.log(chalk.cyan('Usage: skillkit workflow pipeline <name>\n'));
+      step('Usage: skillkit workflow pipeline <name>\n');
       console.log('Available pipelines:');
       for (const p of BUILTIN_PIPELINES) {
-        console.log(`  ${chalk.bold(p.id)} - ${p.description}`);
+        console.log(`  ${colors.bold(p.id)} - ${p.description}`);
       }
       console.log();
-      console.log(chalk.dim('Run: skillkit workflow pipeline list for details'));
+      console.log(colors.muted('Run: skillkit workflow pipeline list for details'));
       return 0;
     }
 
     const pipeline = getBuiltinPipeline(this.pipeline);
 
     if (!pipeline) {
-      console.log(chalk.red(`Pipeline not found: ${this.pipeline}`));
-      console.log(chalk.dim('Run `skillkit workflow pipeline list` to see available pipelines'));
+      error(`Pipeline not found: ${this.pipeline}`);
+      console.log(colors.muted('Run `skillkit workflow pipeline list` to see available pipelines'));
       return 1;
     }
 
@@ -57,46 +57,46 @@ export class WorkflowPipelineCommand extends Command {
   }
 
   private showPipeline(pipeline: AgentPipeline): number {
-    console.log(chalk.cyan(`Pipeline: ${pipeline.name}\n`));
+    step(`Pipeline: ${pipeline.name}\n`);
     console.log(`Description: ${pipeline.description}`);
     console.log();
-    console.log(chalk.bold('Stages:'));
+    console.log(colors.bold('Stages:'));
 
     for (let i = 0; i < pipeline.stages.length; i++) {
       const stage = pipeline.stages[i];
       const arrow = i < pipeline.stages.length - 1 ? '→' : '';
-      console.log(`  ${i + 1}. ${chalk.bold(stage.name)} (@${stage.agent})`);
-      console.log(`     ${chalk.dim(stage.description)}`);
+      console.log(`  ${i + 1}. ${colors.bold(stage.name)} (@${stage.agent})`);
+      console.log(`     ${colors.muted(stage.description)}`);
       if (arrow) {
-        console.log(`     ${chalk.dim(arrow)}`);
+        console.log(`     ${colors.muted(arrow)}`);
       }
     }
 
     console.log();
-    console.log(chalk.dim('(dry-run mode - no execution)'));
+    console.log(colors.muted('(dry-run mode - no execution)'));
 
     return 0;
   }
 
   private async runPipeline(pipeline: AgentPipeline): Promise<number> {
-    console.log(chalk.cyan(`Starting Pipeline: ${pipeline.name}\n`));
+    step(`Starting Pipeline: ${pipeline.name}\n`);
 
     for (let i = 0; i < pipeline.stages.length; i++) {
       const stage = pipeline.stages[i];
       const stageNum = `[${i + 1}/${pipeline.stages.length}]`;
 
-      console.log(`${chalk.blue(stageNum)} ${chalk.bold(stage.name)}`);
+      console.log(`${colors.info(stageNum)} ${colors.bold(stage.name)}`);
       console.log(`  Agent: @${stage.agent}`);
-      console.log(`  ${chalk.dim(stage.description)}`);
+      console.log(`  ${colors.muted(stage.description)}`);
       console.log();
 
-      console.log(chalk.yellow(`  → Invoke @${stage.agent} for: ${stage.description}`));
-      console.log(chalk.dim('    (Manual agent invocation required in current implementation)'));
+      warn(`  → Invoke @${stage.agent} for: ${stage.description}`);
+      console.log(colors.muted('    (Manual agent invocation required in current implementation)'));
       console.log();
     }
 
-    console.log(chalk.green('✓ Pipeline stages displayed'));
-    console.log(chalk.dim('Execute each stage by invoking the agents in order'));
+    success('✓ Pipeline stages displayed');
+    console.log(colors.muted('Execute each stage by invoking the agents in order'));
 
     return 0;
   }
@@ -122,16 +122,16 @@ export class WorkflowPipelineListCommand extends Command {
       return 0;
     }
 
-    console.log(chalk.cyan(`Available Pipelines (${pipelines.length}):\n`));
+    step(`Available Pipelines (${pipelines.length}):\n`);
 
     for (const pipeline of pipelines) {
-      console.log(chalk.bold(`  ${pipeline.id}`));
+      console.log(colors.bold(`  ${pipeline.id}`));
       console.log(`    ${pipeline.name}: ${pipeline.description}`);
       console.log(`    Stages: ${pipeline.stages.map(s => s.name).join(' → ')}`);
       console.log();
     }
 
-    console.log(chalk.dim('Run with: skillkit workflow pipeline <name>'));
+    console.log(colors.muted('Run with: skillkit workflow pipeline <name>'));
 
     return 0;
   }

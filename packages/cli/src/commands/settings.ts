@@ -1,5 +1,5 @@
 import { Command, Option } from 'clipanion';
-import chalk from 'chalk';
+import { colors, success, step } from '../onboarding/index.js';
 import { loadConfig, saveConfig, type SkillkitConfig, type AgentType } from '@skillkit/core';
 
 const VALID_AGENTS: AgentType[] = [
@@ -69,7 +69,7 @@ export class SettingsCommand extends Command {
         autoSync: true,
       };
       saveConfig(defaultConfig, this.global);
-      console.log(chalk.green('Settings reset to defaults'));
+      success('Settings reset to defaults');
       return 0;
     }
 
@@ -81,7 +81,7 @@ export class SettingsCommand extends Command {
         'enabledSkills', 'disabledSkills', 'marketplaceSources', 'defaultTimeout'
       ];
       if (!knownKeys.includes(this.get)) {
-        console.error(chalk.red(`Unknown setting: ${this.get}`));
+        console.error(colors.error(`Unknown setting: ${this.get}`));
         return 1;
       }
       const value = this.getConfigValue(config, this.get);
@@ -100,18 +100,18 @@ export class SettingsCommand extends Command {
       const value = valueParts.join('=');
 
       if (!key || !this.set.includes('=')) {
-        console.error(chalk.red('Invalid format. Use: --set key=value'));
+        console.error(colors.error('Invalid format. Use: --set key=value'));
         return 1;
       }
 
       const result = this.setConfigValue(config, key, value);
       if (!result.success) {
-        console.error(chalk.red(result.error));
+        console.error(colors.error(result.error || 'Unknown error'));
         return 1;
       }
 
       saveConfig(config, this.global);
-      console.log(chalk.green(`${key} = ${value}`));
+      success(`${key} = ${value}`);
       return 0;
     }
 
@@ -119,8 +119,8 @@ export class SettingsCommand extends Command {
     if (this.json) {
       console.log(JSON.stringify(config, null, 2));
     } else {
-      console.log(chalk.cyan('SkillKit Settings'));
-      console.log(chalk.dim('─'.repeat(40)));
+      step('SkillKit Settings');
+      console.log(colors.muted('─'.repeat(40)));
       console.log();
 
       const settings = [
@@ -132,25 +132,25 @@ export class SettingsCommand extends Command {
       ];
 
       for (const setting of settings) {
-        console.log(`  ${chalk.white(setting.label.padEnd(14))} ${chalk.dim(setting.value)}`);
+        console.log(`  ${colors.primary(setting.label.padEnd(14))} ${colors.muted(setting.value)}`);
       }
 
       if (config.enabledSkills?.length) {
         console.log();
-        console.log(`  ${chalk.white('Enabled Skills'.padEnd(14))} ${chalk.dim(config.enabledSkills.join(', '))}`);
+        console.log(`  ${colors.primary('Enabled Skills'.padEnd(14))} ${colors.muted(config.enabledSkills.join(', '))}`);
       }
 
       if (config.disabledSkills?.length) {
-        console.log(`  ${chalk.white('Disabled Skills'.padEnd(14))} ${chalk.dim(config.disabledSkills.join(', '))}`);
+        console.log(`  ${colors.primary('Disabled Skills'.padEnd(14))} ${colors.muted(config.disabledSkills.join(', '))}`);
       }
 
       if (config.marketplaceSources?.length) {
-        console.log(`  ${chalk.white('Marketplaces'.padEnd(14))} ${chalk.dim(config.marketplaceSources.join(', '))}`);
+        console.log(`  ${colors.primary('Marketplaces'.padEnd(14))} ${colors.muted(config.marketplaceSources.join(', '))}`);
       }
 
       console.log();
-      console.log(chalk.dim('Use --set key=value to modify settings'));
-      console.log(chalk.dim('Available keys: agent, autoSync, cacheDir, skillsDir, defaultTimeout'));
+      console.log(colors.muted('Use --set key=value to modify settings'));
+      console.log(colors.muted('Available keys: agent, autoSync, cacheDir, skillsDir, defaultTimeout'));
     }
 
     return 0;

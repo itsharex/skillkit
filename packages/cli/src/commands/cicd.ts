@@ -1,5 +1,5 @@
 import { Command, Option } from 'clipanion';
-import chalk from 'chalk';
+import { colors } from '../onboarding/index.js';
 import { existsSync, mkdirSync, writeFileSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -247,7 +247,7 @@ export class CICDCommand extends Command {
       ? ['github', 'gitlab', 'circleci']
       : [this.provider as CICDProvider];
 
-    console.log(chalk.cyan('Initializing CI/CD workflows...'));
+    console.log(colors.cyan('Initializing CI/CD workflows...'));
     console.log();
 
     let success = true;
@@ -256,29 +256,29 @@ export class CICDCommand extends Command {
     for (const provider of providers) {
       const result = this.createWorkflow(projectPath, provider);
       if (result.skipped) {
-        console.log(chalk.yellow(`  ${result.message}`));
+        console.log(colors.warning(`  ${result.message}`));
         continue;
       }
       if (!result.success) {
         success = false;
-        console.error(chalk.red(`  ${result.message}`));
+        console.error(colors.error(`  ${result.message}`));
         continue;
       }
       created = true;
-      console.log(chalk.green(`  ✓ ${result.message}`));
+      console.log(colors.success(`  ✓ ${result.message}`));
     }
 
     if (success) {
       console.log();
       console.log(
         created
-          ? chalk.green('CI/CD workflows initialized successfully!')
-          : chalk.yellow('CI/CD workflows already exist; nothing to do.')
+          ? colors.success('CI/CD workflows initialized successfully!')
+          : colors.warning('CI/CD workflows already exist; nothing to do.')
       );
       console.log();
       if (created) {
-        console.log(chalk.dim('The workflows will run on push/PR to validate your skills.'));
-        console.log(chalk.dim('Commit the generated files to enable CI/CD.'));
+        console.log(colors.muted('The workflows will run on push/PR to validate your skills.'));
+        console.log(colors.muted('Commit the generated files to enable CI/CD.'));
       }
     }
 

@@ -1,6 +1,6 @@
 import { Command, Option } from 'clipanion';
 import { resolve } from 'node:path';
-import chalk from 'chalk';
+import { colors, warn, success, error } from '../onboarding/index.js';
 import { SessionManager } from '@skillkit/core';
 
 /**
@@ -36,35 +36,35 @@ export class PauseCommand extends Command {
     const state = manager.get();
 
     if (!state) {
-      console.log(chalk.yellow('No active session found.'));
+      warn('No active session found.');
       return 1;
     }
 
     if (!state.currentExecution) {
-      console.log(chalk.yellow('No skill execution in progress.'));
+      warn('No skill execution in progress.');
       return 1;
     }
 
     if (state.currentExecution.status === 'paused') {
-      console.log(chalk.yellow('Execution is already paused.'));
-      console.log(chalk.dim('Resume with: skillkit resume'));
+      warn('Execution is already paused.');
+      console.log(colors.muted('Resume with: skillkit resume'));
       return 0;
     }
 
-    const success = manager.pause();
+    const paused = manager.pause();
 
-    if (success) {
+    if (paused) {
       const exec = state.currentExecution;
-      console.log(chalk.green('✓ Execution paused'));
+      success('✓ Execution paused');
       console.log();
-      console.log(`  Skill: ${chalk.bold(exec.skillName)}`);
+      console.log(`  Skill: ${colors.bold(exec.skillName)}`);
       console.log(`  Progress: ${exec.currentStep}/${exec.totalSteps} tasks completed`);
       console.log();
-      console.log(chalk.dim('Resume with: skillkit resume'));
-      console.log(chalk.dim('View status: skillkit status'));
+      console.log(colors.muted('Resume with: skillkit resume'));
+      console.log(colors.muted('View status: skillkit status'));
       return 0;
     } else {
-      console.log(chalk.red('Failed to pause execution.'));
+      error('Failed to pause execution.');
       return 1;
     }
   }

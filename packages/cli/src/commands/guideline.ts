@@ -1,5 +1,5 @@
 import { Command, Option } from 'clipanion';
-import chalk from 'chalk';
+import { colors } from '../onboarding/index.js';
 import {
   getAllGuidelines,
   getEnabledGuidelines,
@@ -31,7 +31,7 @@ export class GuidelineCommand extends Command {
   });
 
   async execute(): Promise<number> {
-    console.log(chalk.cyan('Guideline commands:\n'));
+    console.log(colors.cyan('Guideline commands:\n'));
     console.log('  guideline list        List all guidelines');
     console.log('  guideline show <id>   Show guideline content');
     console.log('  guideline enable      Enable a guideline');
@@ -70,7 +70,7 @@ export class GuidelineListCommand extends Command {
     }
 
     const title = this.enabled ? 'Enabled Guidelines' : 'All Guidelines';
-    console.log(chalk.cyan(`${title} (${guidelines.length}):\n`));
+    console.log(colors.cyan(`${title} (${guidelines.length}):\n`));
 
     const byCategory = new Map<GuidelineCategory, Guideline[]>();
     for (const guideline of guidelines) {
@@ -81,22 +81,22 @@ export class GuidelineListCommand extends Command {
     }
 
     for (const [category, catGuidelines] of byCategory) {
-      console.log(chalk.blue(`  ${formatCategoryName(category)}`));
+      console.log(colors.info(`  ${formatCategoryName(category)}`));
 
       for (const guideline of catGuidelines) {
         const enabled = isGuidelineEnabled(guideline.id);
-        const status = enabled ? chalk.green('●') : chalk.dim('○');
-        const custom = isBuiltinGuideline(guideline.id) ? '' : chalk.dim(' (custom)');
-        const priority = chalk.dim(`[${guideline.priority}]`);
+        const status = enabled ? colors.success('●') : colors.muted('○');
+        const custom = isBuiltinGuideline(guideline.id) ? '' : colors.muted(' (custom)');
+        const priority = colors.muted(`[${guideline.priority}]`);
 
-        console.log(`    ${status} ${chalk.bold(guideline.id)} ${priority}${custom}`);
-        console.log(`      ${chalk.dim(guideline.description)}`);
+        console.log(`    ${status} ${colors.bold(guideline.id)} ${priority}${custom}`);
+        console.log(`      ${colors.muted(guideline.description)}`);
       }
       console.log();
     }
 
-    console.log(chalk.dim('Enable with: skillkit guideline enable <id>'));
-    console.log(chalk.dim('Show content: skillkit guideline show <id>'));
+    console.log(colors.muted('Enable with: skillkit guideline enable <id>'));
+    console.log(colors.muted('Show content: skillkit guideline show <id>'));
 
     return 0;
   }
@@ -116,20 +116,20 @@ export class GuidelineShowCommand extends Command {
     const guideline = getGuideline(this.id);
 
     if (!guideline) {
-      console.log(chalk.red(`Guideline not found: ${this.id}`));
+      console.log(colors.error(`Guideline not found: ${this.id}`));
       return 1;
     }
 
     const enabled = isGuidelineEnabled(this.id);
-    const status = enabled ? chalk.green('enabled') : chalk.dim('disabled');
+    const status = enabled ? colors.success('enabled') : colors.muted('disabled');
 
-    console.log(chalk.cyan(`Guideline: ${guideline.name}\n`));
+    console.log(colors.cyan(`Guideline: ${guideline.name}\n`));
     console.log(`ID: ${guideline.id}`);
     console.log(`Category: ${guideline.category}`);
     console.log(`Priority: ${guideline.priority}`);
     console.log(`Status: ${status}`);
     console.log();
-    console.log(chalk.bold('Content:'));
+    console.log(colors.bold('Content:'));
     console.log(guideline.content);
 
     return 0;
@@ -150,11 +150,11 @@ export class GuidelineEnableCommand extends Command {
     const success = enableGuideline(this.id);
 
     if (!success) {
-      console.log(chalk.red(`Guideline not found: ${this.id}`));
+      console.log(colors.error(`Guideline not found: ${this.id}`));
       return 1;
     }
 
-    console.log(chalk.green(`✓ Enabled guideline: ${this.id}`));
+    console.log(colors.success(`✓ Enabled guideline: ${this.id}`));
     return 0;
   }
 }
@@ -173,11 +173,11 @@ export class GuidelineDisableCommand extends Command {
     const success = disableGuideline(this.id);
 
     if (!success) {
-      console.log(chalk.yellow(`Guideline not found or already disabled: ${this.id}`));
+      console.log(colors.warning(`Guideline not found or already disabled: ${this.id}`));
       return 0;
     }
 
-    console.log(chalk.green(`✓ Disabled guideline: ${this.id}`));
+    console.log(colors.success(`✓ Disabled guideline: ${this.id}`));
     return 0;
   }
 }
@@ -216,7 +216,7 @@ export class GuidelineCreateCommand extends Command {
 
   async execute(): Promise<number> {
     if (isBuiltinGuideline(this.id)) {
-      console.log(chalk.red(`Cannot create: ${this.id} is a built-in guideline`));
+      console.log(colors.error(`Cannot create: ${this.id} is a built-in guideline`));
       return 1;
     }
 
@@ -234,8 +234,8 @@ export class GuidelineCreateCommand extends Command {
     addCustomGuideline(guideline);
     enableGuideline(this.id);
 
-    console.log(chalk.green(`✓ Created guideline: ${this.id}`));
-    console.log(chalk.dim('Edit ~/.skillkit/guidelines.yaml to customize content'));
+    console.log(colors.success(`✓ Created guideline: ${this.id}`));
+    console.log(colors.muted('Edit ~/.skillkit/guidelines.yaml to customize content'));
 
     return 0;
   }
@@ -253,18 +253,18 @@ export class GuidelineRemoveCommand extends Command {
 
   async execute(): Promise<number> {
     if (isBuiltinGuideline(this.id)) {
-      console.log(chalk.red(`Cannot remove built-in guideline: ${this.id}`));
+      console.log(colors.error(`Cannot remove built-in guideline: ${this.id}`));
       return 1;
     }
 
     const removed = removeCustomGuideline(this.id);
 
     if (!removed) {
-      console.log(chalk.yellow(`Guideline not found: ${this.id}`));
+      console.log(colors.warning(`Guideline not found: ${this.id}`));
       return 1;
     }
 
-    console.log(chalk.green(`✓ Removed guideline: ${this.id}`));
+    console.log(colors.success(`✓ Removed guideline: ${this.id}`));
     return 0;
   }
 }

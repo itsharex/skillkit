@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import { colors, warn, error } from '../onboarding/index.js';
 import { Command, Option } from 'clipanion';
 import { findSkill, readSkillContent } from '@skillkit/core';
 import { getSearchDirs } from '../helpers.js';
@@ -30,7 +30,7 @@ export class ReadCommand extends Command {
       .filter(s => s.length > 0);
 
     if (skillNames.length === 0) {
-      console.error(chalk.red('No skill names provided'));
+      error('No skill names provided');
       return 1;
     }
 
@@ -40,16 +40,16 @@ export class ReadCommand extends Command {
       const skill = findSkill(skillName, searchDirs);
 
       if (!skill) {
-        console.error(chalk.red(`Skill not found: ${skillName}`));
-        console.error(chalk.dim('Available directories:'));
-        searchDirs.forEach(d => console.error(chalk.dim(`  - ${d}`)));
+        error(`Skill not found: ${skillName}`);
+        console.log(colors.muted('Available directories:'));
+        searchDirs.forEach(d => console.log(colors.muted(`  - ${d}`)));
         exitCode = 1;
         continue;
       }
 
       if (!skill.enabled) {
-        console.error(chalk.yellow(`Skill disabled: ${skillName}`));
-        console.error(chalk.dim('Enable with: skillkit enable ' + skillName));
+        warn(`Skill disabled: ${skillName}`);
+        console.log(colors.muted('Enable with: skillkit enable ' + skillName));
         exitCode = 1;
         continue;
       }
@@ -57,7 +57,7 @@ export class ReadCommand extends Command {
       const content = readSkillContent(skill.path);
 
       if (!content) {
-        console.error(chalk.red(`Could not read SKILL.md for: ${skillName}`));
+        error(`Could not read SKILL.md for: ${skillName}`);
         exitCode = 1;
         continue;
       }

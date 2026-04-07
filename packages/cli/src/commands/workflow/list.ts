@@ -1,6 +1,6 @@
 import { Command, Option } from 'clipanion';
 import { resolve } from 'node:path';
-import chalk from 'chalk';
+import { colors, warn, error, step } from '../../onboarding/index.js';
 import { listWorkflows } from '@skillkit/core';
 
 /**
@@ -43,8 +43,8 @@ export class WorkflowListCommand extends Command {
     try {
       workflows = listWorkflows(targetPath);
     } catch (err) {
-      console.log(chalk.red('Failed to list workflows.'));
-      console.log(chalk.dim(String(err)));
+      error('Failed to list workflows.');
+      console.log(colors.muted(String(err)));
       return 1;
     }
 
@@ -54,40 +54,40 @@ export class WorkflowListCommand extends Command {
     }
 
     if (workflows.length === 0) {
-      console.log(chalk.yellow('No workflows found.'));
-      console.log(chalk.dim('Create a workflow with: skillkit workflow create'));
-      console.log(chalk.dim('Or add YAML files to .skillkit/workflows/'));
+      warn('No workflows found.');
+      console.log(colors.muted('Create a workflow with: skillkit workflow create'));
+      console.log(colors.muted('Or add YAML files to .skillkit/workflows/'));
       return 0;
     }
 
-    console.log(chalk.cyan(`Available Workflows (${workflows.length}):\n`));
+    step(`Available Workflows (${workflows.length}):\n`);
 
     for (const workflow of workflows) {
-      console.log(`  ${chalk.bold(workflow.name)}`);
+      console.log(`  ${colors.bold(workflow.name)}`);
 
       if (workflow.description) {
-        console.log(`    ${chalk.dim(workflow.description)}`);
+        console.log(`    ${colors.muted(workflow.description)}`);
       }
 
       if (this.verbose) {
-        console.log(`    Version: ${chalk.dim(workflow.version || 'N/A')}`);
-        console.log(`    Waves: ${chalk.dim(workflow.waves.length.toString())}`);
+        console.log(`    Version: ${colors.muted(workflow.version || 'N/A')}`);
+        console.log(`    Waves: ${colors.muted(workflow.waves.length.toString())}`);
 
         const totalSkills = workflow.waves.reduce(
           (sum, wave) => sum + wave.skills.length,
           0
         );
-        console.log(`    Total Skills: ${chalk.dim(totalSkills.toString())}`);
+        console.log(`    Total Skills: ${colors.muted(totalSkills.toString())}`);
 
         if (workflow.tags && workflow.tags.length > 0) {
-          console.log(`    Tags: ${chalk.dim(workflow.tags.join(', '))}`);
+          console.log(`    Tags: ${colors.muted(workflow.tags.join(', '))}`);
         }
       }
 
       console.log();
     }
 
-    console.log(chalk.dim('Run a workflow with: skillkit workflow run <name>'));
+    console.log(colors.muted('Run a workflow with: skillkit workflow run <name>'));
 
     return 0;
   }

@@ -5,7 +5,7 @@
  */
 
 import { Command, Option } from 'clipanion';
-import chalk from 'chalk';
+import { colors } from '../onboarding/index.js';
 import { createHookManager, type HookEvent, type InjectionMode } from '@skillkit/core';
 import {
   getHookTemplates,
@@ -60,12 +60,12 @@ export class HookCommand extends Command {
         case 'info':
           return await this.showHookInfo(projectPath);
         default:
-          this.context.stderr.write(chalk.red(`Unknown action: ${this.action}\n`));
+          this.context.stderr.write(colors.error(`Unknown action: ${this.action}\n`));
           this.context.stderr.write('Available actions: list, add, remove, enable, disable, generate, info\n');
           return 1;
       }
     } catch (err) {
-      this.context.stderr.write(chalk.red(`✗ ${err instanceof Error ? err.message : 'Unknown error'}\n`));
+      this.context.stderr.write(colors.error(`✗ ${err instanceof Error ? err.message : 'Unknown error'}\n`));
       return 1;
     }
   }
@@ -76,11 +76,11 @@ export class HookCommand extends Command {
 
     if (hooks.length === 0) {
       this.context.stdout.write('No hooks configured.\n');
-      this.context.stdout.write(chalk.gray('Run `skillkit hook add <event> <skill>` to add a hook.\n'));
+      this.context.stdout.write(colors.muted('Run `skillkit hook add <event> <skill>` to add a hook.\n'));
       return 0;
     }
 
-    this.context.stdout.write(chalk.cyan('Configured Hooks:\n\n'));
+    this.context.stdout.write(colors.cyan('Configured Hooks:\n\n'));
 
     // Group by event
     const eventGroups = new Map<string, typeof hooks>();
@@ -91,15 +91,15 @@ export class HookCommand extends Command {
     }
 
     for (const [event, eventHooks] of eventGroups) {
-      this.context.stdout.write(chalk.yellow(`${event}:\n`));
+      this.context.stdout.write(colors.warning(`${event}:\n`));
       for (const hook of eventHooks) {
-        const status = hook.enabled ? chalk.green('●') : chalk.gray('○');
-        this.context.stdout.write(`  ${status} ${chalk.white(hook.id.slice(0, 8))} → ${hook.skills.join(', ')}\n`);
+        const status = hook.enabled ? colors.success('●') : colors.muted('○');
+        this.context.stdout.write(`  ${status} ${colors.primary(hook.id.slice(0, 8))} → ${hook.skills.join(', ')}\n`);
         if (hook.matcher) {
-          this.context.stdout.write(chalk.gray(`    Pattern: ${hook.matcher}\n`));
+          this.context.stdout.write(colors.muted(`    Pattern: ${hook.matcher}\n`));
         }
         if (this.verbose) {
-          this.context.stdout.write(chalk.gray(`    Inject: ${hook.inject}, Priority: ${hook.priority || 0}\n`));
+          this.context.stdout.write(colors.muted(`    Inject: ${hook.inject}, Priority: ${hook.priority || 0}\n`));
         }
       }
     }
@@ -110,14 +110,14 @@ export class HookCommand extends Command {
 
   private async addHook(projectPath: string): Promise<number> {
     if (!this.target) {
-      this.context.stderr.write(chalk.red('Event type required.\n'));
+      this.context.stderr.write(colors.error('Event type required.\n'));
       this.context.stderr.write('Usage: skillkit hook add <event> <skill>\n');
       this.context.stderr.write('Events: session:start, session:end, file:save, file:open, task:start, commit:pre, commit:post, error:occur, test:fail, build:fail\n');
       return 1;
     }
 
     if (!this.skill) {
-      this.context.stderr.write(chalk.red('Skill name required.\n'));
+      this.context.stderr.write(colors.error('Skill name required.\n'));
       this.context.stderr.write('Usage: skillkit hook add <event> <skill>\n');
       return 1;
     }
@@ -133,7 +133,7 @@ export class HookCommand extends Command {
     ];
 
     if (!validEvents.includes(event)) {
-      this.context.stderr.write(chalk.red(`Invalid event: ${this.target}\n`));
+      this.context.stderr.write(colors.error(`Invalid event: ${this.target}\n`));
       this.context.stderr.write(`Valid events: ${validEvents.join(', ')}\n`);
       return 1;
     }
@@ -151,7 +151,7 @@ export class HookCommand extends Command {
 
     manager.save();
 
-    this.context.stdout.write(chalk.green(`✓ Hook added: ${hook.id.slice(0, 8)}\n`));
+    this.context.stdout.write(colors.success(`✓ Hook added: ${hook.id.slice(0, 8)}\n`));
     this.context.stdout.write(`  Event: ${event}\n`);
     this.context.stdout.write(`  Skill: ${this.skill}\n`);
     if (this.pattern) {
@@ -163,7 +163,7 @@ export class HookCommand extends Command {
 
   private async removeHook(projectPath: string): Promise<number> {
     if (!this.target) {
-      this.context.stderr.write(chalk.red('Hook ID required.\n'));
+      this.context.stderr.write(colors.error('Hook ID required.\n'));
       this.context.stderr.write('Usage: skillkit hook remove <hook-id>\n');
       return 1;
     }
@@ -174,20 +174,20 @@ export class HookCommand extends Command {
     // Find hook by ID prefix
     const hook = hooks.find((h) => h.id.startsWith(this.target!));
     if (!hook) {
-      this.context.stderr.write(chalk.red(`Hook not found: ${this.target}\n`));
+      this.context.stderr.write(colors.error(`Hook not found: ${this.target}\n`));
       return 1;
     }
 
     manager.unregisterHook(hook.id);
     manager.save();
 
-    this.context.stdout.write(chalk.green(`✓ Hook removed: ${hook.id.slice(0, 8)}\n`));
+    this.context.stdout.write(colors.success(`✓ Hook removed: ${hook.id.slice(0, 8)}\n`));
     return 0;
   }
 
   private async enableHook(projectPath: string): Promise<number> {
     if (!this.target) {
-      this.context.stderr.write(chalk.red('Hook ID required.\n'));
+      this.context.stderr.write(colors.error('Hook ID required.\n'));
       return 1;
     }
 
@@ -196,20 +196,20 @@ export class HookCommand extends Command {
     const hook = hooks.find((h) => h.id.startsWith(this.target!));
 
     if (!hook) {
-      this.context.stderr.write(chalk.red(`Hook not found: ${this.target}\n`));
+      this.context.stderr.write(colors.error(`Hook not found: ${this.target}\n`));
       return 1;
     }
 
     manager.enableHook(hook.id);
     manager.save();
 
-    this.context.stdout.write(chalk.green(`✓ Hook enabled: ${hook.id.slice(0, 8)}\n`));
+    this.context.stdout.write(colors.success(`✓ Hook enabled: ${hook.id.slice(0, 8)}\n`));
     return 0;
   }
 
   private async disableHook(projectPath: string): Promise<number> {
     if (!this.target) {
-      this.context.stderr.write(chalk.red('Hook ID required.\n'));
+      this.context.stderr.write(colors.error('Hook ID required.\n'));
       return 1;
     }
 
@@ -218,14 +218,14 @@ export class HookCommand extends Command {
     const hook = hooks.find((h) => h.id.startsWith(this.target!));
 
     if (!hook) {
-      this.context.stderr.write(chalk.red(`Hook not found: ${this.target}\n`));
+      this.context.stderr.write(colors.error(`Hook not found: ${this.target}\n`));
       return 1;
     }
 
     manager.disableHook(hook.id);
     manager.save();
 
-    this.context.stdout.write(chalk.yellow(`○ Hook disabled: ${hook.id.slice(0, 8)}\n`));
+    this.context.stdout.write(colors.warning(`○ Hook disabled: ${hook.id.slice(0, 8)}\n`));
     return 0;
   }
 
@@ -241,7 +241,7 @@ export class HookCommand extends Command {
     const agent = this.agent || 'claude-code';
     const generated = manager.generateAgentHooks(agent as any);
 
-    this.context.stdout.write(chalk.cyan(`Generated hooks for ${agent}:\n\n`));
+    this.context.stdout.write(colors.cyan(`Generated hooks for ${agent}:\n\n`));
 
     if (typeof generated === 'string') {
       this.context.stdout.write(generated);
@@ -255,7 +255,7 @@ export class HookCommand extends Command {
 
   private async showHookInfo(projectPath: string): Promise<number> {
     if (!this.target) {
-      this.context.stderr.write(chalk.red('Hook ID required.\n'));
+      this.context.stderr.write(colors.error('Hook ID required.\n'));
       return 1;
     }
 
@@ -264,11 +264,11 @@ export class HookCommand extends Command {
     const hook = hooks.find((h) => h.id.startsWith(this.target!));
 
     if (!hook) {
-      this.context.stderr.write(chalk.red(`Hook not found: ${this.target}\n`));
+      this.context.stderr.write(colors.error(`Hook not found: ${this.target}\n`));
       return 1;
     }
 
-    this.context.stdout.write(chalk.cyan(`\nHook: ${hook.id}\n`));
+    this.context.stdout.write(colors.cyan(`\nHook: ${hook.id}\n`));
     this.context.stdout.write(`Event: ${hook.event}\n`);
     this.context.stdout.write(`Skills: ${hook.skills.join(', ')}\n`);
     this.context.stdout.write(`Enabled: ${hook.enabled ? 'Yes' : 'No'}\n`);
@@ -317,7 +317,7 @@ export class HookTemplateListCommand extends Command {
       return 0;
     }
 
-    console.log(chalk.cyan(`Hook Templates (${templates.length}):\n`));
+    console.log(colors.cyan(`Hook Templates (${templates.length}):\n`));
 
     const byCategory = new Map<HookTemplateCategory, HookTemplate[]>();
     for (const template of templates) {
@@ -328,17 +328,17 @@ export class HookTemplateListCommand extends Command {
     }
 
     for (const [category, catTemplates] of byCategory) {
-      console.log(chalk.blue(`  ${formatCategory(category)}`));
+      console.log(colors.info(`  ${formatCategory(category)}`));
       for (const template of catTemplates) {
-        const blocking = template.blocking ? chalk.yellow(' [blocking]') : '';
-        console.log(`    ${chalk.bold(template.id)}${blocking}`);
-        console.log(`      ${chalk.dim(template.description)}`);
+        const blocking = template.blocking ? colors.warning(' [blocking]') : '';
+        console.log(`    ${colors.bold(template.id)}${blocking}`);
+        console.log(`      ${colors.muted(template.description)}`);
         console.log(`      Event: ${template.event}`);
       }
       console.log();
     }
 
-    console.log(chalk.dim('Apply with: skillkit hook template apply <id>'));
+    console.log(colors.muted('Apply with: skillkit hook template apply <id>'));
 
     return 0;
   }
@@ -361,8 +361,8 @@ export class HookTemplateApplyCommand extends Command {
     const template = getHookTemplate(this.id);
 
     if (!template) {
-      console.log(chalk.red(`Template not found: ${this.id}`));
-      console.log(chalk.dim('Run `skillkit hook template list` to see available templates'));
+      console.log(colors.error(`Template not found: ${this.id}`));
+      console.log(colors.muted('Run `skillkit hook template list` to see available templates'));
       return 1;
     }
 
@@ -385,12 +385,12 @@ export class HookTemplateApplyCommand extends Command {
 
     manager.save();
 
-    console.log(chalk.green(`✓ Applied template: ${template.name}`));
+    console.log(colors.success(`✓ Applied template: ${template.name}`));
     console.log(`  Hook ID: ${hook.id.slice(0, 8)}`);
     console.log(`  Event: ${template.event}`);
-    console.log(`  Command: ${chalk.dim(template.command)}`);
+    console.log(`  Command: ${colors.muted(template.command)}`);
     if (template.blocking) {
-      console.log(chalk.yellow(`  Blocking: yes`));
+      console.log(colors.warning(`  Blocking: yes`));
     }
 
     return 0;
@@ -411,11 +411,11 @@ export class HookTemplateShowCommand extends Command {
     const template = getHookTemplate(this.id);
 
     if (!template) {
-      console.log(chalk.red(`Template not found: ${this.id}`));
+      console.log(colors.error(`Template not found: ${this.id}`));
       return 1;
     }
 
-    console.log(chalk.cyan(`Template: ${template.name}\n`));
+    console.log(colors.cyan(`Template: ${template.name}\n`));
     console.log(`ID: ${template.id}`);
     console.log(`Category: ${template.category}`);
     console.log(`Description: ${template.description}`);
@@ -426,7 +426,7 @@ export class HookTemplateShowCommand extends Command {
     console.log(`Blocking: ${template.blocking ? 'yes' : 'no'}`);
     console.log(`Timeout: ${template.timeout || 30000}ms`);
     console.log();
-    console.log(chalk.bold('Command:'));
+    console.log(colors.bold('Command:'));
     console.log(`  ${template.command}`);
 
     return 0;

@@ -1,5 +1,5 @@
 import { Command, Option } from 'clipanion';
-import chalk from 'chalk';
+import { colors, warn, success, step } from '../onboarding/index.js';
 import {
   loadSessionFile,
   saveSessionFile,
@@ -32,7 +32,7 @@ export class SessionCommand extends Command {
   });
 
   async execute(): Promise<number> {
-    console.log(chalk.cyan('Session commands:\n'));
+    step('Session commands:\n');
     console.log('  session status            Show current session state');
     console.log('  session start             Start a new session');
     console.log('  session load              Load session from specific date');
@@ -65,8 +65,8 @@ export class SessionStatusCommand extends Command {
     const session = getMostRecentSession();
 
     if (!session) {
-      console.log(chalk.yellow('No active session found'));
-      console.log(chalk.dim('Start one with: skillkit session start'));
+      warn('No active session found');
+      console.log(colors.muted('Start one with: skillkit session start'));
       return 0;
     }
 
@@ -80,7 +80,7 @@ export class SessionStatusCommand extends Command {
   }
 
   private printSession(session: SessionFile): void {
-    console.log(chalk.cyan(`Session: ${session.date}\n`));
+    step(`Session: ${session.date}\n`);
     console.log(`Agent: ${session.agent}`);
     console.log(`Project: ${session.projectPath}`);
     console.log(`Started: ${session.startedAt}`);
@@ -88,33 +88,33 @@ export class SessionStatusCommand extends Command {
     console.log();
 
     if (session.completed.length > 0) {
-      console.log(chalk.green('Completed:'));
+      console.log(colors.success('Completed:'));
       for (const task of session.completed) {
-        console.log(`  ${chalk.green('✓')} ${task}`);
+        console.log(`  ${colors.success('✓')} ${task}`);
       }
       console.log();
     }
 
     if (session.inProgress.length > 0) {
-      console.log(chalk.yellow('In Progress:'));
+      console.log(colors.warning('In Progress:'));
       for (const task of session.inProgress) {
-        console.log(`  ${chalk.yellow('○')} ${task}`);
+        console.log(`  ${colors.warning('○')} ${task}`);
       }
       console.log();
     }
 
     if (session.notes.length > 0) {
-      console.log(chalk.blue('Notes for Next Session:'));
-      for (const note of session.notes) {
-        console.log(`  ${chalk.dim('•')} ${note}`);
+      console.log(colors.info('Notes for Next Session:'));
+      for (const n of session.notes) {
+        console.log(`  ${colors.muted('•')} ${n}`);
       }
       console.log();
     }
 
     if (session.contextToLoad.length > 0) {
-      console.log(chalk.dim('Context to Load:'));
+      console.log(colors.muted('Context to Load:'));
       for (const ctx of session.contextToLoad) {
-        console.log(`  ${chalk.dim('•')} ${ctx}`);
+        console.log(`  ${colors.muted('•')} ${ctx}`);
       }
     }
   }
@@ -142,8 +142,8 @@ export class SessionStartCommand extends Command {
     const session = createSessionFile(agent, projectPath);
     const filepath = saveSessionFile(session);
 
-    console.log(chalk.green(`✓ Session started: ${session.date}`));
-    console.log(chalk.dim(`  Saved to: ${filepath}`));
+    success(`✓ Session started: ${session.date}`);
+    console.log(colors.muted(`  Saved to: ${filepath}`));
 
     return 0;
   }
@@ -163,31 +163,31 @@ export class SessionLoadCommand extends Command {
     const session = this.date ? loadSessionFile(this.date) : getMostRecentSession();
 
     if (!session) {
-      console.log(chalk.yellow('Session not found'));
+      warn('Session not found');
       return 1;
     }
 
-    console.log(chalk.green(`✓ Loaded session: ${session.date}`));
+    success(`✓ Loaded session: ${session.date}`);
     console.log();
 
     if (session.notes.length > 0) {
-      console.log(chalk.cyan('Notes from previous session:'));
-      for (const note of session.notes) {
-        console.log(`  ${chalk.dim('•')} ${note}`);
+      step('Notes from previous session:');
+      for (const n of session.notes) {
+        console.log(`  ${colors.muted('•')} ${n}`);
       }
       console.log();
     }
 
     if (session.inProgress.length > 0) {
-      console.log(chalk.yellow('Tasks still in progress:'));
+      console.log(colors.warning('Tasks still in progress:'));
       for (const task of session.inProgress) {
-        console.log(`  ${chalk.yellow('○')} ${task}`);
+        console.log(`  ${colors.warning('○')} ${task}`);
       }
       console.log();
     }
 
     if (session.contextToLoad.length > 0) {
-      console.log(chalk.dim('Context to load:'));
+      console.log(colors.muted('Context to load:'));
       for (const ctx of session.contextToLoad) {
         console.log(`  ${ctx}`);
       }
@@ -218,7 +218,7 @@ export class SessionListCommand extends Command {
     const sessions = listSessions(limit);
 
     if (sessions.length === 0) {
-      console.log(chalk.yellow('No sessions found'));
+      warn('No sessions found');
       return 0;
     }
 
@@ -227,13 +227,13 @@ export class SessionListCommand extends Command {
       return 0;
     }
 
-    console.log(chalk.cyan(`Recent Sessions (${sessions.length}):\n`));
+    step(`Recent Sessions (${sessions.length}):\n`);
 
     for (const session of sessions) {
       const progress = `${session.completedCount}/${session.taskCount}`;
-      const notesIndicator = session.hasNotes ? chalk.blue(' [notes]') : '';
-      console.log(`  ${chalk.bold(session.date)} - ${session.agent}`);
-      console.log(`    ${chalk.dim(session.projectPath)}`);
+      const notesIndicator = session.hasNotes ? colors.info(' [notes]') : '';
+      console.log(`  ${colors.bold(session.date)} - ${session.agent}`);
+      console.log(`    ${colors.muted(session.projectPath)}`);
       console.log(`    Tasks: ${progress}${notesIndicator}`);
       console.log();
     }
@@ -265,7 +265,7 @@ export class SessionNoteCommand extends Command {
 
     saveSessionFile(updated);
 
-    console.log(chalk.green('✓ Note added'));
+    success('✓ Note added');
     return 0;
   }
 }
@@ -297,7 +297,7 @@ export class SessionCompleteCommand extends Command {
 
     saveSessionFile(updated);
 
-    console.log(chalk.green(`✓ Completed: ${this.task}`));
+    success(`✓ Completed: ${this.task}`);
     return 0;
   }
 }
@@ -325,7 +325,7 @@ export class SessionInProgressCommand extends Command {
 
     saveSessionFile(updated);
 
-    console.log(chalk.yellow(`○ In progress: ${this.task}`));
+    console.log(colors.warning(`○ In progress: ${this.task}`));
     return 0;
   }
 }
@@ -354,7 +354,7 @@ export class SessionSnapshotSaveCommand extends Command {
 
     const state = sessionMgr.get();
     if (!state) {
-      console.log(chalk.yellow('No active session to snapshot'));
+      warn('No active session to snapshot');
       return 1;
     }
 
@@ -375,9 +375,9 @@ export class SessionSnapshotSaveCommand extends Command {
     }
 
     manager.save(this.name, state, observations, this.desc);
-    console.log(chalk.green(`\u2713 Snapshot saved: ${this.name}`));
+    success(`\u2713 Snapshot saved: ${this.name}`);
     if (this.desc) {
-      console.log(chalk.dim(`  ${this.desc}`));
+      console.log(colors.muted(`  ${this.desc}`));
     }
     return 0;
   }
@@ -398,7 +398,7 @@ export class SessionSnapshotRestoreCommand extends Command {
     const manager = new SnapshotManager(projectPath);
 
     if (!manager.exists(this.name)) {
-      console.log(chalk.red(`Snapshot "${this.name}" not found`));
+      console.log(colors.error(`Snapshot "${this.name}" not found`));
       return 1;
     }
 
@@ -429,7 +429,7 @@ export class SessionSnapshotRestoreCommand extends Command {
       // Non-critical: session state restored even if observations fail
     }
 
-    console.log(chalk.green(`\u2713 Snapshot restored: ${this.name}`));
+    success(`\u2713 Snapshot restored: ${this.name}`);
     return 0;
   }
 }
@@ -457,18 +457,18 @@ export class SessionSnapshotListCommand extends Command {
     }
 
     if (snapshots.length === 0) {
-      console.log(chalk.yellow('No snapshots found'));
-      console.log(chalk.dim('Save one with: skillkit session snapshot save <name>'));
+      warn('No snapshots found');
+      console.log(colors.muted('Save one with: skillkit session snapshot save <name>'));
       return 0;
     }
 
-    console.log(chalk.cyan(`Snapshots (${snapshots.length}):\n`));
+    step(`Snapshots (${snapshots.length}):\n`);
 
     for (const snap of snapshots) {
-      console.log(`  ${chalk.bold(snap.name)}`);
+      console.log(`  ${colors.bold(snap.name)}`);
       console.log(`    Created: ${snap.createdAt}`);
       if (snap.description) {
-        console.log(`    ${chalk.dim(snap.description)}`);
+        console.log(`    ${colors.muted(snap.description)}`);
       }
       console.log(`    Skills in history: ${snap.skillCount}`);
       console.log();
@@ -493,11 +493,11 @@ export class SessionSnapshotDeleteCommand extends Command {
     const manager = new SnapshotManager(projectPath);
 
     if (!manager.delete(this.name)) {
-      console.log(chalk.red(`Snapshot "${this.name}" not found`));
+      console.log(colors.error(`Snapshot "${this.name}" not found`));
       return 1;
     }
 
-    console.log(chalk.green(`\u2713 Snapshot deleted: ${this.name}`));
+    success(`\u2713 Snapshot deleted: ${this.name}`);
     return 0;
   }
 }

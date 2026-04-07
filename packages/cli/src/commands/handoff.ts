@@ -1,6 +1,6 @@
 import { Command, Option } from 'clipanion';
 import { writeFileSync } from 'node:fs';
-import chalk from 'chalk';
+import { colors } from '../onboarding/index.js';
 import { SessionHandoff } from '@skillkit/core';
 
 export class SessionHandoffCommand extends Command {
@@ -41,9 +41,9 @@ export class SessionHandoffCommand extends Command {
     if (this.out) {
       try {
         writeFileSync(this.out, output, 'utf-8');
-        console.log(chalk.green(`Handoff saved to ${this.out}`));
+        console.log(colors.success(`Handoff saved to ${this.out}`));
       } catch (error) {
-        console.error(chalk.red(`Failed to write file: ${(error as Error).message}`));
+        console.error(colors.error(`Failed to write file: ${(error as Error).message}`));
         return 1;
       }
     } else {

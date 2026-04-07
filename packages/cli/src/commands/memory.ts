@@ -1,5 +1,5 @@
 import { Command, Option } from 'clipanion';
-import chalk from 'chalk';
+import { colors, error, warn } from '../onboarding/index.js';
 import {
   ObservationStore,
   LearningStore,
@@ -158,8 +158,8 @@ export class MemoryCommand extends Command {
       case 'index':
         return this.showIndex();
       default:
-        console.error(chalk.red(`Unknown action: ${action}`));
-        console.log(chalk.gray('Available actions: status, search, list, show, compress, export, import, clear, add, rate, sync-claude, index, config'));
+        error(`Unknown action: ${action}`);
+        console.log(colors.muted('Available actions: status, search, list, show, compress, export, import, clear, add, rate, sync-claude, index, config'));
         return 1;
     }
   }
@@ -194,32 +194,32 @@ export class MemoryCommand extends Command {
       return 0;
     }
 
-    console.log(chalk.bold('\nMemory Status\n'));
+    console.log(colors.bold('\nMemory Status\n'));
 
     // Session observations
-    console.log(chalk.cyan('Session:'));
+    console.log(colors.cyan('Session:'));
     console.log(`  Observations: ${sessionObservations}`);
     if (sessionId) {
-      console.log(`  Session ID: ${chalk.gray(sessionId.slice(0, 8))}`);
+      console.log(`  Session ID: ${colors.muted(sessionId.slice(0, 8))}`);
     }
     console.log();
 
     // Project learnings
-    console.log(chalk.cyan('Project:'));
+    console.log(colors.cyan('Project:'));
     console.log(`  Learnings: ${projectLearnings}`);
-    console.log(`  Path: ${chalk.gray(status.projectMemoryExists ? paths.projectMemoryDir : 'Not initialized')}`);
+    console.log(`  Path: ${colors.muted(status.projectMemoryExists ? paths.projectMemoryDir : 'Not initialized')}`);
     console.log();
 
     // Global learnings
-    console.log(chalk.cyan('Global:'));
+    console.log(colors.cyan('Global:'));
     console.log(`  Learnings: ${globalLearnings}`);
-    console.log(`  Path: ${chalk.gray(status.globalMemoryExists ? paths.globalMemoryDir : 'Not initialized')}`);
+    console.log(`  Path: ${colors.muted(status.globalMemoryExists ? paths.globalMemoryDir : 'Not initialized')}`);
     console.log();
 
     // Recommendations
     if (sessionObservations >= 50) {
-      console.log(chalk.yellow('💡 You have many uncompressed observations. Consider running:'));
-      console.log(chalk.gray('   skillkit memory compress'));
+      warn('💡 You have many uncompressed observations. Consider running:');
+      console.log(colors.muted('   skillkit memory compress'));
     }
 
     return 0;
@@ -231,8 +231,8 @@ export class MemoryCommand extends Command {
   private async searchMemories(): Promise<number> {
     const query = this.arg;
     if (!query) {
-      console.error(chalk.red('Error: Search query is required'));
-      console.log(chalk.gray('Usage: skillkit memory search "your query"'));
+      error('Error: Search query is required');
+      console.log(colors.muted('Usage: skillkit memory search "your query"'));
       return 1;
     }
 
@@ -244,7 +244,7 @@ export class MemoryCommand extends Command {
     if (this.limit) {
       const parsed = parseInt(this.limit, 10);
       if (isNaN(parsed) || parsed <= 0) {
-        console.log(chalk.red('Invalid --limit value. Must be a positive number.'));
+        console.log(colors.error('Invalid --limit value. Must be a positive number.'));
         return 1;
       }
       maxLearnings = parsed;
@@ -269,15 +269,15 @@ export class MemoryCommand extends Command {
     }
 
     if (results.length === 0) {
-      console.log(chalk.yellow(`No memories found for: "${query}"`));
+      console.log(colors.warning(`No memories found for: "${query}"`));
       return 0;
     }
 
-    console.log(chalk.bold(`\nFound ${results.length} memories:\n`));
+    console.log(colors.bold(`\nFound ${results.length} memories:\n`));
 
     for (const { learning, relevanceScore, matchedBy } of results) {
-      console.log(`${chalk.cyan('●')} ${chalk.bold(learning.title)}`);
-      console.log(`  ID: ${chalk.gray(learning.id.slice(0, 8))}`);
+      console.log(`${colors.cyan('●')} ${colors.bold(learning.title)}`);
+      console.log(`  ID: ${colors.muted(learning.id.slice(0, 8))}`);
       console.log(`  Relevance: ${this.formatScore(relevanceScore)}%`);
       console.log(`  Tags: ${learning.tags.join(', ')}`);
       console.log(`  Scope: ${learning.scope}`);
@@ -290,7 +290,7 @@ export class MemoryCommand extends Command {
 
       // Show excerpt
       const excerpt = learning.content.slice(0, 100);
-      console.log(`  ${chalk.gray(excerpt)}${learning.content.length > 100 ? '...' : ''}`);
+      console.log(`  ${colors.muted(excerpt)}${learning.content.length > 100 ? '...' : ''}`);
       console.log();
     }
 
@@ -327,12 +327,12 @@ export class MemoryCommand extends Command {
     }
 
     const scope = this.global ? 'Global' : 'Project';
-    console.log(chalk.bold(`\n${scope} Learnings (${learnings.length}):\n`));
+    console.log(colors.bold(`\n${scope} Learnings (${learnings.length}):\n`));
 
     if (learnings.length === 0) {
-      console.log(chalk.gray('No learnings found.'));
-      console.log(chalk.gray('\nCapture learnings by running skills or add manually:'));
-      console.log(chalk.gray('  skillkit memory add --title "..." --content "..."'));
+      console.log(colors.muted('No learnings found.'));
+      console.log(colors.muted('\nCapture learnings by running skills or add manually:'));
+      console.log(colors.muted('  skillkit memory add --title "..." --content "..."'));
       return 0;
     }
 
@@ -341,12 +341,12 @@ export class MemoryCommand extends Command {
         ? ` [${this.formatScore(learning.effectiveness)}%]`
         : '';
 
-      console.log(`${chalk.cyan('●')} ${learning.title}${chalk.green(effectiveness)}`);
-      console.log(`  ${chalk.gray(learning.id.slice(0, 8))} | ${learning.tags.join(', ')} | ${learning.useCount} uses`);
+      console.log(`${colors.cyan('●')} ${learning.title}${colors.success(effectiveness)}`);
+      console.log(`  ${colors.muted(learning.id.slice(0, 8))} | ${learning.tags.join(', ')} | ${learning.useCount} uses`);
 
       if (this.verbose) {
         const excerpt = learning.content.slice(0, 80);
-        console.log(`  ${chalk.gray(excerpt)}${learning.content.length > 80 ? '...' : ''}`);
+        console.log(`  ${colors.muted(excerpt)}${learning.content.length > 80 ? '...' : ''}`);
       }
     }
 
@@ -360,8 +360,8 @@ export class MemoryCommand extends Command {
   private async showLearning(): Promise<number> {
     const id = this.arg;
     if (!id) {
-      console.error(chalk.red('Error: Learning ID is required'));
-      console.log(chalk.gray('Usage: skillkit memory show <id>'));
+      error('Error: Learning ID is required');
+      console.log(colors.muted('Usage: skillkit memory show <id>'));
       return 1;
     }
 
@@ -385,7 +385,7 @@ export class MemoryCommand extends Command {
     }
 
     if (!learning) {
-      console.error(chalk.red(`Learning not found: ${id}`));
+      error(`Learning not found: ${id}`);
       return 1;
     }
 
@@ -394,29 +394,29 @@ export class MemoryCommand extends Command {
       return 0;
     }
 
-    console.log(chalk.bold(`\n${learning.title}\n`));
-    console.log(chalk.gray(`ID: ${learning.id}`));
-    console.log(chalk.gray(`Scope: ${learning.scope}`));
-    console.log(chalk.gray(`Source: ${learning.source}`));
-    console.log(chalk.gray(`Tags: ${learning.tags.join(', ')}`));
+    console.log(colors.bold(`\n${learning.title}\n`));
+    console.log(colors.muted(`ID: ${learning.id}`));
+    console.log(colors.muted(`Scope: ${learning.scope}`));
+    console.log(colors.muted(`Source: ${learning.source}`));
+    console.log(colors.muted(`Tags: ${learning.tags.join(', ')}`));
 
     if (learning.frameworks?.length) {
-      console.log(chalk.gray(`Frameworks: ${learning.frameworks.join(', ')}`));
+      console.log(colors.muted(`Frameworks: ${learning.frameworks.join(', ')}`));
     }
 
     if (learning.patterns?.length) {
-      console.log(chalk.gray(`Patterns: ${learning.patterns.join(', ')}`));
+      console.log(colors.muted(`Patterns: ${learning.patterns.join(', ')}`));
     }
 
-    console.log(chalk.gray(`Created: ${new Date(learning.createdAt).toLocaleString()}`));
-    console.log(chalk.gray(`Updated: ${new Date(learning.updatedAt).toLocaleString()}`));
-    console.log(chalk.gray(`Uses: ${learning.useCount}`));
+    console.log(colors.muted(`Created: ${new Date(learning.createdAt).toLocaleString()}`));
+    console.log(colors.muted(`Updated: ${new Date(learning.updatedAt).toLocaleString()}`));
+    console.log(colors.muted(`Uses: ${learning.useCount}`));
 
     if (learning.effectiveness !== undefined) {
-      console.log(chalk.gray(`Effectiveness: ${this.formatScore(learning.effectiveness)}%`));
+      console.log(colors.muted(`Effectiveness: ${this.formatScore(learning.effectiveness)}%`));
     }
 
-    console.log(chalk.bold('\nContent:\n'));
+    console.log(colors.bold('\nContent:\n'));
     console.log(learning.content);
     console.log();
 
@@ -436,11 +436,11 @@ export class MemoryCommand extends Command {
     const observations = observationStore.getAll();
 
     if (observations.length === 0) {
-      console.log(chalk.yellow('No observations to compress.'));
+      console.log(colors.warning('No observations to compress.'));
       return 0;
     }
 
-    console.log(chalk.cyan(`Found ${observations.length} observations to compress...\n`));
+    console.log(colors.cyan(`Found ${observations.length} observations to compress...\n`));
 
     const compressor = createMemoryCompressor(projectPath);
     const compressionOptions = {
@@ -449,17 +449,17 @@ export class MemoryCommand extends Command {
     };
 
     if (this.dryRun) {
-      console.log(chalk.gray('(Dry run - no changes will be made)\n'));
+      console.log(colors.muted('(Dry run - no changes will be made)\n'));
 
       // For dry-run, only compress without storing
       const result = await compressor.compress(observations, compressionOptions);
 
-      console.log(chalk.green(`✓ Would compress ${result.stats.inputCount} observations into ${result.stats.outputCount} learnings\n`));
+      console.log(colors.success(`✓ Would compress ${result.stats.inputCount} observations into ${result.stats.outputCount} learnings\n`));
 
       if (result.learnings.length > 0) {
-        console.log(chalk.bold('Learnings that would be created:'));
+        console.log(colors.bold('Learnings that would be created:'));
         for (const learning of result.learnings) {
-          console.log(`  ${chalk.cyan('●')} ${learning.title}`);
+          console.log(`  ${colors.cyan('●')} ${learning.title}`);
           console.log(`    Tags: ${learning.tags.join(', ')}`);
         }
         console.log();
@@ -471,12 +471,12 @@ export class MemoryCommand extends Command {
     // Actual compression with storage
     const { learnings, result } = await compressor.compressAndStore(observations, compressionOptions);
 
-    console.log(chalk.green(`✓ Compressed ${result.stats.inputCount} observations into ${result.stats.outputCount} learnings\n`));
+    console.log(colors.success(`✓ Compressed ${result.stats.inputCount} observations into ${result.stats.outputCount} learnings\n`));
 
     if (learnings.length > 0) {
-      console.log(chalk.bold('New Learnings:'));
+      console.log(colors.bold('New Learnings:'));
       for (const learning of learnings) {
-        console.log(`  ${chalk.cyan('●')} ${learning.title}`);
+        console.log(`  ${colors.cyan('●')} ${learning.title}`);
         console.log(`    Tags: ${learning.tags.join(', ')}`);
       }
       console.log();
@@ -485,7 +485,7 @@ export class MemoryCommand extends Command {
     if (result.processedObservationIds.length > 0) {
       // Remove processed observations
       const deleted = observationStore.deleteMany(result.processedObservationIds);
-      console.log(chalk.gray(`Cleared ${deleted} processed observations.`));
+      console.log(colors.muted(`Cleared ${deleted} processed observations.`));
     }
 
     return 0;
@@ -497,8 +497,8 @@ export class MemoryCommand extends Command {
   private async exportLearning(): Promise<number> {
     const id = this.arg;
     if (!id) {
-      console.error(chalk.red('Error: Learning ID is required'));
-      console.log(chalk.gray('Usage: skillkit memory export <id> --name my-skill'));
+      error('Error: Learning ID is required');
+      console.log(colors.muted('Usage: skillkit memory export <id> --name my-skill'));
       return 1;
     }
 
@@ -519,7 +519,7 @@ export class MemoryCommand extends Command {
     }
 
     if (!learning) {
-      console.error(chalk.red(`Learning not found: ${id}`));
+      error(`Learning not found: ${id}`);
       return 1;
     }
 
@@ -530,7 +530,7 @@ export class MemoryCommand extends Command {
     const skillContent = this.generateSkillContent(learning, skillName);
 
     if (this.dryRun) {
-      console.log(chalk.gray('(Dry run preview)\n'));
+      console.log(colors.muted('(Dry run preview)\n'));
       console.log(skillContent);
       return 0;
     }
@@ -547,8 +547,8 @@ export class MemoryCommand extends Command {
 
     writeFileSync(outputPath, skillContent, 'utf-8');
 
-    console.log(chalk.green(`✓ Exported learning as skill: ${skillName}`));
-    console.log(chalk.gray(`  Path: ${outputPath}`));
+    console.log(colors.success(`✓ Exported learning as skill: ${skillName}`));
+    console.log(colors.muted(`  Path: ${outputPath}`));
 
     return 0;
   }
@@ -559,8 +559,8 @@ export class MemoryCommand extends Command {
   private async importMemories(): Promise<number> {
     const inputPath = this.input || this.arg;
     if (!inputPath) {
-      console.error(chalk.red('Error: Input path is required'));
-      console.log(chalk.gray('Usage: skillkit memory import --input <path>'));
+      error('Error: Input path is required');
+      console.log(colors.muted('Usage: skillkit memory import --input <path>'));
       return 1;
     }
 
@@ -569,7 +569,7 @@ export class MemoryCommand extends Command {
 
     const fullPath = resolve(inputPath);
     if (!existsSync(fullPath)) {
-      console.error(chalk.red(`File not found: ${fullPath}`));
+      error(`File not found: ${fullPath}`);
       return 1;
     }
 
@@ -585,14 +585,14 @@ export class MemoryCommand extends Command {
       const data = parseYaml(content) as { learnings?: Learning[] };
 
       if (!data.learnings || !Array.isArray(data.learnings)) {
-        console.error(chalk.red('Invalid memory file format'));
+        error('Invalid memory file format');
         return 1;
       }
 
       let imported = 0;
       for (const learning of data.learnings) {
         if (this.dryRun) {
-          console.log(chalk.gray(`Would import: ${learning.title}`));
+          console.log(colors.muted(`Would import: ${learning.title}`));
         } else {
           store.add({
             source: 'imported',
@@ -608,14 +608,14 @@ export class MemoryCommand extends Command {
       }
 
       if (this.dryRun) {
-        console.log(chalk.gray(`\n(Dry run - ${data.learnings.length} learnings would be imported)`));
+        console.log(colors.muted(`\n(Dry run - ${data.learnings.length} learnings would be imported)`));
       } else {
-        console.log(chalk.green(`✓ Imported ${imported} learnings`));
+        console.log(colors.success(`✓ Imported ${imported} learnings`));
       }
 
       return 0;
-    } catch (error) {
-      console.error(chalk.red(`Import failed: ${error}`));
+    } catch (err) {
+      error(`Import failed: ${err}`);
       return 1;
     }
   }
@@ -630,7 +630,7 @@ export class MemoryCommand extends Command {
       const observationStore = new ObservationStore(projectPath);
       const learningStore = new LearningStore('project', projectPath);
 
-      console.log(chalk.gray('(Dry run preview)\n'));
+      console.log(colors.muted('(Dry run preview)\n'));
       console.log(`Would clear ${observationStore.count()} observations`);
       if (!this.keepLearnings) {
         console.log(`Would clear ${learningStore.count()} learnings`);
@@ -640,12 +640,12 @@ export class MemoryCommand extends Command {
 
     const observationStore = new ObservationStore(projectPath);
     observationStore.clear();
-    console.log(chalk.green('✓ Cleared session observations'));
+    console.log(colors.success('✓ Cleared session observations'));
 
     if (!this.keepLearnings) {
       const learningStore = new LearningStore('project', projectPath);
       learningStore.clear();
-      console.log(chalk.green('✓ Cleared project learnings'));
+      console.log(colors.success('✓ Cleared project learnings'));
     }
 
     return 0;
@@ -656,14 +656,14 @@ export class MemoryCommand extends Command {
    */
   private async addLearning(): Promise<number> {
     if (!this.title) {
-      console.error(chalk.red('Error: --title is required'));
-      console.log(chalk.gray('Usage: skillkit memory add --title "..." --content "..."'));
+      error('Error: --title is required');
+      console.log(colors.muted('Usage: skillkit memory add --title "..." --content "..."'));
       return 1;
     }
 
     if (!this.content) {
-      console.error(chalk.red('Error: --content is required'));
-      console.log(chalk.gray('Usage: skillkit memory add --title "..." --content "..."'));
+      error('Error: --content is required');
+      console.log(colors.muted('Usage: skillkit memory add --title "..." --content "..."'));
       return 1;
     }
 
@@ -682,8 +682,8 @@ export class MemoryCommand extends Command {
       tags,
     });
 
-    console.log(chalk.green(`✓ Added learning: ${learning.title}`));
-    console.log(chalk.gray(`  ID: ${learning.id}`));
+    console.log(colors.success(`✓ Added learning: ${learning.title}`));
+    console.log(colors.muted(`  ID: ${learning.id}`));
 
     return 0;
   }
@@ -694,15 +694,15 @@ export class MemoryCommand extends Command {
   private async rateLearning(): Promise<number> {
     const id = this.arg;
     if (!id) {
-      console.error(chalk.red('Error: Learning ID is required'));
-      console.log(chalk.gray('Usage: skillkit memory rate <id> <rating>'));
+      error('Error: Learning ID is required');
+      console.log(colors.muted('Usage: skillkit memory rate <id> <rating>'));
       return 1;
     }
 
     const rating = parseInt(this.ratingArg || '0', 10);
     if (isNaN(rating) || rating < 0 || rating > 100) {
-      console.error(chalk.red('Error: Rating must be 0-100'));
-      console.log(chalk.gray('Usage: skillkit memory rate <id> <rating>'));
+      error('Error: Rating must be 0-100');
+      console.log(colors.muted('Usage: skillkit memory rate <id> <rating>'));
       return 1;
     }
 
@@ -737,12 +737,12 @@ export class MemoryCommand extends Command {
     }
 
     if (!learning) {
-      console.error(chalk.red(`Learning not found: ${id}`));
+      error(`Learning not found: ${id}`);
       return 1;
     }
 
     store.setEffectiveness(learning.id, rating);
-    console.log(chalk.green(`✓ Rated "${learning.title}" as ${rating}% effective`));
+    console.log(colors.success(`✓ Rated "${learning.title}" as ${rating}% effective`));
 
     return 0;
   }
@@ -759,14 +759,14 @@ export class MemoryCommand extends Command {
       return 0;
     }
 
-    console.log(chalk.bold('\nMemory Configuration\n'));
+    console.log(colors.bold('\nMemory Configuration\n'));
 
-    console.log(chalk.cyan('Paths:'));
-    console.log(`  Project observations: ${chalk.gray(paths.observationsFile)}`);
-    console.log(`  Project learnings: ${chalk.gray(paths.learningsFile)}`);
-    console.log(`  Project index: ${chalk.gray(paths.indexFile)}`);
-    console.log(`  Global learnings: ${chalk.gray(paths.globalLearningsFile)}`);
-    console.log(`  Global index: ${chalk.gray(paths.globalIndexFile)}`);
+    console.log(colors.cyan('Paths:'));
+    console.log(`  Project observations: ${colors.muted(paths.observationsFile)}`);
+    console.log(`  Project learnings: ${colors.muted(paths.learningsFile)}`);
+    console.log(`  Project index: ${colors.muted(paths.indexFile)}`);
+    console.log(`  Global learnings: ${colors.muted(paths.globalLearningsFile)}`);
+    console.log(`  Global index: ${colors.muted(paths.globalIndexFile)}`);
     console.log();
 
     return 0;
@@ -780,7 +780,7 @@ export class MemoryCommand extends Command {
 
     if (this.global) {
       if (this.dryRun) {
-        console.log(chalk.gray('(Dry run - previewing global CLAUDE.md sync)\n'));
+        console.log(colors.muted('(Dry run - previewing global CLAUDE.md sync)\n'));
       }
 
       const result = this.dryRun
@@ -792,21 +792,21 @@ export class MemoryCommand extends Command {
         const learnings = globalStore.getAll()
           .filter((l) => (l.effectiveness ?? 0) >= 60 || l.useCount >= 3)
           .slice(0, 20);
-        console.log(chalk.cyan(`Would add ${learnings.length} learnings to global CLAUDE.md`));
+        console.log(colors.cyan(`Would add ${learnings.length} learnings to global CLAUDE.md`));
         for (const l of learnings.slice(0, 5)) {
-          console.log(`  ${chalk.gray('●')} ${l.title}`);
+          console.log(`  ${colors.muted('●')} ${l.title}`);
         }
         if (learnings.length > 5) {
-          console.log(chalk.gray(`  ... and ${learnings.length - 5} more`));
+          console.log(colors.muted(`  ... and ${learnings.length - 5} more`));
         }
         return 0;
       }
 
       if (result.updated) {
-        console.log(chalk.green(`✓ Updated global CLAUDE.md with ${result.learningsAdded} learnings`));
-        console.log(chalk.gray(`  Path: ${result.path}`));
+        console.log(colors.success(`✓ Updated global CLAUDE.md with ${result.learningsAdded} learnings`));
+        console.log(colors.muted(`  Path: ${result.path}`));
       } else {
-        console.log(chalk.yellow('No learnings to sync to global CLAUDE.md'));
+        console.log(colors.warning('No learnings to sync to global CLAUDE.md'));
       }
 
       return 0;
@@ -817,28 +817,28 @@ export class MemoryCommand extends Command {
     if (this.dryRun) {
       const preview = updater.preview({ minEffectiveness: 60 });
 
-      console.log(chalk.gray('(Dry run preview)\n'));
+      console.log(colors.muted('(Dry run preview)\n'));
 
       if (!preview.wouldUpdate) {
-        console.log(chalk.yellow('No learnings to sync to CLAUDE.md'));
+        console.log(colors.warning('No learnings to sync to CLAUDE.md'));
         return 0;
       }
 
-      console.log(chalk.cyan(`Would add ${preview.learnings.length} learnings to CLAUDE.md\n`));
+      console.log(colors.cyan(`Would add ${preview.learnings.length} learnings to CLAUDE.md\n`));
 
       for (const learning of preview.learnings.slice(0, 5)) {
-        console.log(`  ${chalk.gray('●')} ${learning.title}`);
+        console.log(`  ${colors.muted('●')} ${learning.title}`);
       }
 
       if (preview.learnings.length > 5) {
-        console.log(chalk.gray(`  ... and ${preview.learnings.length - 5} more`));
+        console.log(colors.muted(`  ... and ${preview.learnings.length - 5} more`));
       }
 
-      console.log(chalk.bold('\nFormatted section preview:'));
-      console.log(chalk.gray('─'.repeat(50)));
+      console.log(colors.bold('\nFormatted section preview:'));
+      console.log(colors.muted('─'.repeat(50)));
       console.log(preview.formattedSection.slice(0, 500));
       if (preview.formattedSection.length > 500) {
-        console.log(chalk.gray('...'));
+        console.log(colors.muted('...'));
       }
 
       return 0;
@@ -847,17 +847,17 @@ export class MemoryCommand extends Command {
     const result = updater.update({ minEffectiveness: 60 });
 
     if (result.updated) {
-      console.log(chalk.green(`✓ Updated CLAUDE.md with ${result.learningsAdded} learnings`));
-      console.log(chalk.gray(`  Path: ${result.path}`));
+      console.log(colors.success(`✓ Updated CLAUDE.md with ${result.learningsAdded} learnings`));
+      console.log(colors.muted(`  Path: ${result.path}`));
 
       if (this.verbose && result.learningSummaries.length > 0) {
-        console.log(chalk.cyan('\nLearnings added:'));
+        console.log(colors.cyan('\nLearnings added:'));
         for (const title of result.learningSummaries.slice(0, 10)) {
-          console.log(`  ${chalk.gray('●')} ${title}`);
+          console.log(`  ${colors.muted('●')} ${title}`);
         }
       }
     } else {
-      console.log(chalk.yellow('No learnings to sync to CLAUDE.md'));
+      console.log(colors.warning('No learnings to sync to CLAUDE.md'));
     }
 
     return 0;
@@ -874,7 +874,7 @@ export class MemoryCommand extends Command {
     if (this.limit) {
       const parsed = parseInt(this.limit, 10);
       if (isNaN(parsed) || parsed <= 0) {
-        console.log(chalk.red('Invalid --limit value. Must be a positive number.'));
+        console.log(colors.error('Invalid --limit value. Must be a positive number.'));
         return 1;
       }
       maxResults = parsed;
@@ -887,10 +887,10 @@ export class MemoryCommand extends Command {
       return 0;
     }
 
-    console.log(chalk.bold(`\nMemory Index (${index.length} entries)\n`));
+    console.log(colors.bold(`\nMemory Index (${index.length} entries)\n`));
 
     if (index.length === 0) {
-      console.log(chalk.gray('No learnings found.'));
+      console.log(colors.muted('No learnings found.'));
       return 0;
     }
 
@@ -901,17 +901,17 @@ export class MemoryCommand extends Command {
       const effectiveness = entry.effectiveness !== undefined
         ? ` [${this.formatScore(entry.effectiveness)}%]`
         : '';
-      const scope = entry.scope === 'global' ? chalk.magenta('[G]') : chalk.blue('[P]');
+      const scope = entry.scope === 'global' ? colors.magenta('[G]') : colors.info('[P]');
 
-      console.log(`${scope} ${chalk.gray(entry.id.slice(0, 8))} ${entry.title}${chalk.green(effectiveness)}`);
+      console.log(`${scope} ${colors.muted(entry.id.slice(0, 8))} ${entry.title}${colors.success(effectiveness)}`);
       console.log(`   Tags: ${entry.tags.join(', ')} | Uses: ${entry.useCount}`);
     }
 
     if (index.length > displayLimit) {
-      console.log(chalk.gray(`\n... and ${index.length - displayLimit} more (use --limit to show more)`));
+      console.log(colors.muted(`\n... and ${index.length - displayLimit} more (use --limit to show more)`));
     }
 
-    console.log(chalk.gray('\nUse "skillkit memory show <id>" to view full details'));
+    console.log(colors.muted('\nUse "skillkit memory show <id>" to view full details'));
 
     return 0;
   }
@@ -920,9 +920,9 @@ export class MemoryCommand extends Command {
    * Format relevance/effectiveness score with color
    */
   private formatScore(score: number): string {
-    if (score >= 80) return chalk.green(score.toString());
-    if (score >= 50) return chalk.yellow(score.toString());
-    return chalk.red(score.toString());
+    if (score >= 80) return colors.success(score.toString());
+    if (score >= 50) return colors.warning(score.toString());
+    return colors.error(score.toString());
   }
 
   /**

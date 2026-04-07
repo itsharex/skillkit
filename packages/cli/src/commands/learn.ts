@@ -1,6 +1,6 @@
 import { Command, Option } from 'clipanion';
 import { resolve } from 'node:path';
-import chalk from 'chalk';
+import { colors } from '../onboarding/index.js';
 import {
   analyzeGitHistory,
   loadPatternStore,
@@ -73,7 +73,7 @@ export class LearnCommand extends Command {
       return this.showPatterns();
     }
 
-    console.log(chalk.cyan('Analyzing git history for learnable patterns...\n'));
+    console.log(colors.cyan('Analyzing git history for learnable patterns...\n'));
 
     const result = analyzeGitHistory(projectPath, {
       commits: this.commits ? parseInt(this.commits) : 100,
@@ -88,8 +88,8 @@ export class LearnCommand extends Command {
     this.printAnalysisResult(result);
 
     if (result.patterns.length === 0) {
-      console.log(chalk.yellow('\nNo learnable patterns found.'));
-      console.log(chalk.dim('Try analyzing more commits or a different date range.'));
+      console.log(colors.warning('\nNo learnable patterns found.'));
+      console.log(colors.muted('Try analyzing more commits or a different date range.'));
       return 0;
     }
 
@@ -105,12 +105,12 @@ export class LearnCommand extends Command {
     }
 
     console.log();
-    console.log(chalk.green(`✓ Extracted ${added} patterns`));
+    console.log(colors.success(`✓ Extracted ${added} patterns`));
 
     if (!this.approve) {
-      console.log(chalk.dim('Patterns are pending approval. Use:'));
-      console.log(chalk.dim('  skillkit pattern approve <id>  - to approve'));
-      console.log(chalk.dim('  skillkit pattern status        - to view all'));
+      console.log(colors.muted('Patterns are pending approval. Use:'));
+      console.log(colors.muted('  skillkit pattern approve <id>  - to approve'));
+      console.log(colors.muted('  skillkit pattern status        - to view all'));
     }
 
     return 0;
@@ -119,21 +119,21 @@ export class LearnCommand extends Command {
   private printAnalysisResult(result: GitAnalysisResult): void {
     const { summary, dateRange, languages, frameworks } = result;
 
-    console.log(chalk.bold('Analysis Summary'));
+    console.log(colors.bold('Analysis Summary'));
     console.log(`  Commits analyzed: ${summary.totalCommits}`);
     console.log(`  Files changed: ${summary.totalFilesChanged}`);
     console.log(`  Date range: ${dateRange.from || 'N/A'} to ${dateRange.to || 'N/A'}`);
     console.log();
 
     if (languages.length > 0) {
-      console.log(`  Languages: ${chalk.cyan(languages.join(', '))}`);
+      console.log(`  Languages: ${colors.cyan(languages.join(', '))}`);
     }
     if (frameworks.length > 0) {
-      console.log(`  Frameworks: ${chalk.cyan(frameworks.join(', '))}`);
+      console.log(`  Frameworks: ${colors.cyan(frameworks.join(', '))}`);
     }
     console.log();
 
-    console.log(chalk.bold('Commit Categories'));
+    console.log(colors.bold('Commit Categories'));
     console.log(`  Error fixes: ${summary.errorFixes}`);
     console.log(`  Refactors: ${summary.refactors}`);
     console.log(`  Features: ${summary.features}`);
@@ -141,15 +141,15 @@ export class LearnCommand extends Command {
     console.log(`  Tests: ${summary.tests}`);
     console.log();
 
-    console.log(chalk.bold(`Patterns Extracted: ${result.patterns.length}`));
+    console.log(colors.bold(`Patterns Extracted: ${result.patterns.length}`));
 
     for (const pattern of result.patterns.slice(0, 5)) {
-      const confidence = chalk.blue(`${(pattern.confidence * 100).toFixed(0)}%`);
-      console.log(`  ${chalk.dim('○')} ${pattern.title} [${pattern.category}] ${confidence}`);
+      const confidence = colors.info(`${(pattern.confidence * 100).toFixed(0)}%`);
+      console.log(`  ${colors.muted('○')} ${pattern.title} [${pattern.category}] ${confidence}`);
     }
 
     if (result.patterns.length > 5) {
-      console.log(chalk.dim(`  ... and ${result.patterns.length - 5} more`));
+      console.log(colors.muted(`  ... and ${result.patterns.length - 5} more`));
     }
   }
 
@@ -162,18 +162,18 @@ export class LearnCommand extends Command {
     }
 
     if (patterns.length === 0) {
-      console.log(chalk.yellow('No patterns stored yet.'));
-      console.log(chalk.dim('Run `skillkit learn` to extract patterns from git history.'));
+      console.log(colors.warning('No patterns stored yet.'));
+      console.log(colors.muted('Run `skillkit learn` to extract patterns from git history.'));
       return 0;
     }
 
-    console.log(chalk.cyan(`Stored Patterns (${patterns.length}):\n`));
+    console.log(colors.cyan(`Stored Patterns (${patterns.length}):\n`));
 
     const approved = patterns.filter(p => p.approved);
     const pending = patterns.filter(p => !p.approved);
 
     if (approved.length > 0) {
-      console.log(chalk.green('Approved:'));
+      console.log(colors.success('Approved:'));
       for (const pattern of approved) {
         this.printPattern(pattern);
       }
@@ -181,7 +181,7 @@ export class LearnCommand extends Command {
     }
 
     if (pending.length > 0) {
-      console.log(chalk.yellow('Pending Approval:'));
+      console.log(colors.warning('Pending Approval:'));
       for (const pattern of pending) {
         this.printPattern(pattern);
       }
@@ -191,11 +191,11 @@ export class LearnCommand extends Command {
   }
 
   private printPattern(pattern: LearnedPattern): void {
-    const confidence = chalk.blue(`${(pattern.confidence * 100).toFixed(0)}%`);
-    const status = pattern.approved ? chalk.green('✓') : chalk.yellow('○');
-    console.log(`  ${status} ${chalk.bold(pattern.id)}`);
+    const confidence = colors.info(`${(pattern.confidence * 100).toFixed(0)}%`);
+    const status = pattern.approved ? colors.success('✓') : colors.warning('○');
+    console.log(`  ${status} ${colors.bold(pattern.id)}`);
     console.log(`    ${pattern.title} [${pattern.category}] ${confidence}`);
-    console.log(chalk.dim(`    ${truncate(pattern.problem, 60)}`));
+    console.log(colors.muted(`    ${truncate(pattern.problem, 60)}`));
   }
 }
 
@@ -226,18 +226,18 @@ export class PatternStatusCommand extends Command {
       return 0;
     }
 
-    console.log(chalk.cyan('Pattern Statistics\n'));
+    console.log(colors.cyan('Pattern Statistics\n'));
     console.log(`Total patterns: ${stats.total}`);
     console.log();
 
-    console.log(chalk.bold('By Confidence:'));
+    console.log(colors.bold('By Confidence:'));
     console.log(`  High (>70%): ${stats.byConfidenceRange.high}`);
     console.log(`  Medium (40-70%): ${stats.byConfidenceRange.medium}`);
     console.log(`  Low (<40%): ${stats.byConfidenceRange.low}`);
     console.log();
 
     if (stats.byDomain.size > 0) {
-      console.log(chalk.bold('By Domain:'));
+      console.log(colors.bold('By Domain:'));
       for (const [domain, count] of stats.byDomain) {
         console.log(`  ${domain}: ${count}`);
       }
@@ -245,7 +245,7 @@ export class PatternStatusCommand extends Command {
     }
 
     if (stats.mostUsed) {
-      console.log(chalk.bold('Most Used Pattern:'));
+      console.log(colors.bold('Most Used Pattern:'));
       console.log(`  ${stats.mostUsed.title} (${stats.mostUsed.useCount} uses)`);
     }
 
@@ -276,7 +276,7 @@ export class PatternFeedbackCommand extends Command {
 
   async execute(): Promise<number> {
     if (!this.success && !this.failure) {
-      console.log(chalk.yellow('Please specify --success or --failure'));
+      console.log(colors.warning('Please specify --success or --failure'));
       return 1;
     }
 
@@ -285,12 +285,12 @@ export class PatternFeedbackCommand extends Command {
       : recordFailure(this.id);
 
     if (!result) {
-      console.log(chalk.red(`Pattern not found: ${this.id}`));
+      console.log(colors.error(`Pattern not found: ${this.id}`));
       return 1;
     }
 
-    const change = result.change === 'increased' ? chalk.green('↑') : chalk.red('↓');
-    console.log(chalk.green(`✓ Feedback recorded`));
+    const change = result.change === 'increased' ? colors.success('↑') : colors.error('↓');
+    console.log(colors.success(`✓ Feedback recorded`));
     console.log(`  Confidence: ${(result.previousConfidence * 100).toFixed(0)}% ${change} ${(result.newConfidence * 100).toFixed(0)}%`);
     console.log(`  Total uses: ${result.pattern.useCount}`);
 
@@ -312,11 +312,11 @@ export class PatternApproveCommand extends Command {
     const pattern = approvePattern(this.id);
 
     if (!pattern) {
-      console.log(chalk.red(`Pattern not found: ${this.id}`));
+      console.log(colors.error(`Pattern not found: ${this.id}`));
       return 1;
     }
 
-    console.log(chalk.green(`✓ Approved: ${pattern.title}`));
+    console.log(colors.success(`✓ Approved: ${pattern.title}`));
     return 0;
   }
 }
@@ -335,11 +335,11 @@ export class PatternRejectCommand extends Command {
     const removed = rejectPattern(this.id);
 
     if (!removed) {
-      console.log(chalk.red(`Pattern not found: ${this.id}`));
+      console.log(colors.error(`Pattern not found: ${this.id}`));
       return 1;
     }
 
-    console.log(chalk.green(`✓ Removed pattern: ${this.id}`));
+    console.log(colors.success(`✓ Removed pattern: ${this.id}`));
     return 0;
   }
 }
@@ -371,7 +371,7 @@ export class PatternExportCommand extends Command {
     const patterns = this.approvedOnly ? getApprovedPatterns() : getAllPatterns();
 
     if (patterns.length === 0) {
-      console.log(chalk.yellow('No patterns to export'));
+      console.log(colors.warning('No patterns to export'));
       return 0;
     }
 
@@ -386,7 +386,7 @@ export class PatternExportCommand extends Command {
 
     if (this.output) {
       writeFileSync(this.output, content);
-      console.log(chalk.green(`✓ Exported ${patterns.length} patterns to ${this.output}`));
+      console.log(colors.success(`✓ Exported ${patterns.length} patterns to ${this.output}`));
     } else {
       console.log(content);
     }
@@ -407,7 +407,7 @@ export class PatternImportCommand extends Command {
 
   async execute(): Promise<number> {
     if (!existsSync(this.file)) {
-      console.log(chalk.red(`File not found: ${this.file}`));
+      console.log(colors.error(`File not found: ${this.file}`));
       return 1;
     }
 
@@ -415,7 +415,7 @@ export class PatternImportCommand extends Command {
     const patterns = importPatternsFromJson(content);
 
     if (patterns.length === 0) {
-      console.log(chalk.yellow('No patterns found in file'));
+      console.log(colors.warning('No patterns found in file'));
       return 1;
     }
 
@@ -423,7 +423,7 @@ export class PatternImportCommand extends Command {
       addPattern(pattern);
     }
 
-    console.log(chalk.green(`✓ Imported ${patterns.length} patterns`));
+    console.log(colors.success(`✓ Imported ${patterns.length} patterns`));
     return 0;
   }
 }
@@ -451,21 +451,21 @@ export class PatternClusterCommand extends Command {
     const patterns = getApprovedPatterns();
 
     if (patterns.length === 0) {
-      console.log(chalk.yellow('No approved patterns to cluster'));
-      console.log(chalk.dim('Approve patterns first with: skillkit pattern approve <id>'));
+      console.log(colors.warning('No approved patterns to cluster'));
+      console.log(colors.muted('Approve patterns first with: skillkit pattern approve <id>'));
       return 0;
     }
 
     const clusters = clusterPatterns(patterns);
 
-    console.log(chalk.cyan(`Pattern Clusters (${clusters.size}):\n`));
+    console.log(colors.cyan(`Pattern Clusters (${clusters.size}):\n`));
 
     for (const [category, categoryPatterns] of clusters) {
-      console.log(chalk.bold(`${category.replace('_', ' ')} (${categoryPatterns.length}):`));
+      console.log(colors.bold(`${category.replace('_', ' ')} (${categoryPatterns.length}):`));
 
       for (const pattern of categoryPatterns) {
-        const confidence = chalk.blue(`${(pattern.confidence * 100).toFixed(0)}%`);
-        console.log(`  ${chalk.dim('○')} ${pattern.title} ${confidence}`);
+        const confidence = colors.info(`${(pattern.confidence * 100).toFixed(0)}%`);
+        console.log(`  ${colors.muted('○')} ${pattern.title} ${confidence}`);
       }
       console.log();
 
@@ -476,7 +476,7 @@ export class PatternClusterCommand extends Command {
 
         if (skill) {
           const filepath = saveGeneratedSkill(skill);
-          console.log(chalk.green(`  → Generated skill: ${filepath}`));
+          console.log(colors.success(`  → Generated skill: ${filepath}`));
         }
       }
     }

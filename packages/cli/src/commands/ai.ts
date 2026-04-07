@@ -1,8 +1,7 @@
 import { Command, Option } from 'clipanion';
 import { resolve } from 'node:path';
 import { promises as fs } from 'fs';
-import chalk from 'chalk';
-import ora from 'ora';
+import { colors, spinner } from '../onboarding/index.js';
 import {
   type SearchableSkill,
   type SkillExample,
@@ -88,7 +87,7 @@ export class AICommand extends Command {
       const providerName = manager.getProviderName();
       if (providerName === 'mock') {
         console.log(
-          chalk.yellow(
+          colors.warning(
             '⚠ Using mock AI provider (limited functionality)\n' +
               '  Set ANTHROPIC_API_KEY or OPENAI_API_KEY for real AI features\n'
           )
@@ -110,7 +109,7 @@ export class AICommand extends Command {
         return this.handleProviders();
       default:
         console.error(
-          chalk.red(`Unknown subcommand: ${this.subcommand}\n`)
+          colors.error(`Unknown subcommand: ${this.subcommand}\n`)
         );
         console.log('Valid subcommands: search, generate, similar, wizard, providers');
         return 1;
@@ -120,19 +119,20 @@ export class AICommand extends Command {
   private async handleSearch(manager: AIManager): Promise<number> {
     const query = this.query || this.skillName;
     if (!query) {
-      console.error(chalk.red('Search query required (--query or positional argument)'));
+      console.error(colors.error('Search query required (--query or positional argument)'));
       return 1;
     }
 
     const skills = await this.loadSkills();
     if (skills.length === 0) {
       console.log(
-        chalk.yellow('No skills found. Run "skillkit recommend --update" first.')
+        colors.warning('No skills found. Run "skillkit recommend --update" first.')
       );
       return 0;
     }
 
-    const spinner = ora('Searching with AI...').start();
+    const s = spinner();
+    s.start('Searching with AI...');
 
     try {
       const results = await manager.searchSkills(query, skills, {
@@ -143,7 +143,7 @@ export class AICommand extends Command {
         includeReasoning: !this.json,
       });
 
-      spinner.stop();
+      s.stop();
 
       if (this.json) {
         console.log(JSON.stringify(results, null, 2));
@@ -151,37 +151,37 @@ export class AICommand extends Command {
       }
 
       if (results.length === 0) {
-        console.log(chalk.yellow(`No skills found matching "${query}"`));
+        console.log(colors.warning(`No skills found matching "${query}"`));
         return 0;
       }
 
-      console.log(chalk.cyan(`\nAI Search Results (${results.length} found):\n`));
+      console.log(colors.cyan(`\nAI Search Results (${results.length} found):\n`));
 
       for (const result of results) {
         const score = Math.round(result.relevance * 100);
         const scoreColor =
-          score >= 70 ? chalk.green : score >= 50 ? chalk.yellow : chalk.dim;
+          score >= 70 ? colors.success : score >= 50 ? colors.warning : colors.muted;
 
         console.log(
-          `  ${scoreColor(`${score}%`)} ${chalk.bold(result.skill.name)}`
+          `  ${scoreColor(`${score}%`)} ${colors.bold(result.skill.name)}`
         );
 
         if (result.skill.description) {
-          console.log(`      ${chalk.dim(result.skill.description)}`);
+          console.log(`      ${colors.muted(result.skill.description)}`);
         }
 
         if (result.reasoning) {
-          console.log(`      ${chalk.dim('→ ' + result.reasoning)}`);
+          console.log(`      ${colors.muted('→ ' + result.reasoning)}`);
         }
 
         console.log();
       }
 
       return 0;
-    } catch (error) {
-      spinner.fail('Search failed');
+    } catch (err) {
+      s.stop(colors.error('Search failed'));
       console.error(
-        chalk.red(error instanceof Error ? error.message : String(error))
+        colors.error(err instanceof Error ? err.message : String(err))
       );
       return 1;
     }
@@ -190,7 +190,7 @@ export class AICommand extends Command {
   private async handleGenerate(manager: AIManager): Promise<number> {
     const description = this.description;
     if (!description) {
-      console.error(chalk.red('Description required (--description)'));
+      console.error(colors.error('Description required (--description)'));
       return 1;
     }
 
@@ -201,7 +201,7 @@ export class AICommand extends Command {
         const code = await fs.readFile(codePath, 'utf-8');
         codeExamples = [code];
       } catch {
-        console.error(chalk.red(`Failed to read code file: ${codePath}`));
+        console.error(colors.error(`Failed to read code file: ${codePath}`));
         return 1;
       }
     }
@@ -213,7 +213,8 @@ export class AICommand extends Command {
       targetAgent: this.targetAgent,
     };
 
-    const spinner = ora('Generating skill with AI...').start();
+    const s = spinner();
+    s.start('Generating skill with AI...');
 
     try {
       const generated = await manager.generateSkill(example, {
@@ -222,13 +223,13 @@ export class AICommand extends Command {
         includeDocumentation: true,
       });
 
-      spinner.stop();
+      s.stop();
 
       const validation = manager.validateGenerated(generated);
       if (!validation.valid) {
-        console.log(chalk.yellow('\n⚠ Generated skill has validation warnings:'));
-        for (const error of validation.errors) {
-          console.log(chalk.dim(`  • ${error}`));
+        console.log(colors.warning('\n⚠ Generated skill has validation warnings:'));
+        for (const err of validation.errors) {
+          console.log(colors.muted(`  • ${err}`));
         }
         console.log();
       }
@@ -238,41 +239,41 @@ export class AICommand extends Command {
         return 0;
       }
 
-      console.log(chalk.green('\n✓ Generated skill successfully\n'));
-      console.log(chalk.cyan('Name:') + ` ${generated.name}`);
-      console.log(chalk.cyan('Description:') + ` ${generated.description}`);
+      console.log(colors.success('\n✓ Generated skill successfully\n'));
+      console.log(colors.cyan('Name:') + ` ${generated.name}`);
+      console.log(colors.cyan('Description:') + ` ${generated.description}`);
       console.log(
-        chalk.cyan('Tags:') + ` ${generated.tags.join(', ')}`
+        colors.cyan('Tags:') + ` ${generated.tags.join(', ')}`
       );
       console.log(
-        chalk.cyan('Confidence:') +
+        colors.cyan('Confidence:') +
           ` ${Math.round(generated.confidence * 100)}%`
       );
 
       if (generated.reasoning) {
-        console.log(chalk.cyan('Reasoning:') + ` ${generated.reasoning}`);
+        console.log(colors.cyan('Reasoning:') + ` ${generated.reasoning}`);
       }
 
-      console.log('\n' + chalk.dim('Content:'));
-      console.log(chalk.dim('─'.repeat(60)));
+      console.log('\n' + colors.muted('Content:'));
+      console.log(colors.muted('─'.repeat(60)));
       console.log(generated.content);
-      console.log(chalk.dim('─'.repeat(60)));
+      console.log(colors.muted('─'.repeat(60)));
 
       if (this.output) {
         const outputPath = resolve(this.output);
         await fs.writeFile(outputPath, generated.content, 'utf-8');
-        console.log(chalk.green(`\n✓ Saved to: ${outputPath}`));
+        console.log(colors.success(`\n✓ Saved to: ${outputPath}`));
       } else {
         console.log(
-          chalk.dim('\nSave with: --output <filename>')
+          colors.muted('\nSave with: --output <filename>')
         );
       }
 
       return 0;
-    } catch (error) {
-      spinner.fail('Generation failed');
+    } catch (err) {
+      s.stop(colors.error('Generation failed'));
       console.error(
-        chalk.red(error instanceof Error ? error.message : String(error))
+        colors.error(err instanceof Error ? err.message : String(err))
       );
       return 1;
     }
@@ -281,14 +282,14 @@ export class AICommand extends Command {
   private async handleSimilar(manager: AIManager): Promise<number> {
     const skillName = this.skillName;
     if (!skillName) {
-      console.error(chalk.red('Skill name required'));
+      console.error(colors.error('Skill name required'));
       return 1;
     }
 
     const skills = await this.loadSkills();
     if (skills.length === 0) {
       console.log(
-        chalk.yellow('No skills found. Run "skillkit recommend --update" first.')
+        colors.warning('No skills found. Run "skillkit recommend --update" first.')
       );
       return 0;
     }
@@ -298,11 +299,12 @@ export class AICommand extends Command {
     );
 
     if (!targetSkill) {
-      console.error(chalk.red(`Skill not found: ${skillName}`));
+      console.error(colors.error(`Skill not found: ${skillName}`));
       return 1;
     }
 
-    const spinner = ora('Finding similar skills...').start();
+    const s = spinner();
+    s.start('Finding similar skills...');
 
     try {
       const results = await manager.findSimilar(targetSkill, skills, {
@@ -313,7 +315,7 @@ export class AICommand extends Command {
         includeReasoning: !this.json,
       });
 
-      spinner.stop();
+      s.stop();
 
       if (this.json) {
         console.log(JSON.stringify(results, null, 2));
@@ -322,40 +324,40 @@ export class AICommand extends Command {
 
       if (results.length === 0) {
         console.log(
-          chalk.yellow(`No similar skills found for "${skillName}"`)
+          colors.warning(`No similar skills found for "${skillName}"`)
         );
         return 0;
       }
 
       console.log(
-        chalk.cyan(`\nSkills similar to "${skillName}" (${results.length} found):\n`)
+        colors.cyan(`\nSkills similar to "${skillName}" (${results.length} found):\n`)
       );
 
       for (const result of results) {
         const score = Math.round(result.relevance * 100);
         const scoreColor =
-          score >= 70 ? chalk.green : score >= 50 ? chalk.yellow : chalk.dim;
+          score >= 70 ? colors.success : score >= 50 ? colors.warning : colors.muted;
 
         console.log(
-          `  ${scoreColor(`${score}%`)} ${chalk.bold(result.skill.name)}`
+          `  ${scoreColor(`${score}%`)} ${colors.bold(result.skill.name)}`
         );
 
         if (result.skill.description) {
-          console.log(`      ${chalk.dim(result.skill.description)}`);
+          console.log(`      ${colors.muted(result.skill.description)}`);
         }
 
         if (result.reasoning) {
-          console.log(`      ${chalk.dim('→ ' + result.reasoning)}`);
+          console.log(`      ${colors.muted('→ ' + result.reasoning)}`);
         }
 
         console.log();
       }
 
       return 0;
-    } catch (error) {
-      spinner.fail('Search failed');
+    } catch (err) {
+      s.stop(colors.error('Search failed'));
       console.error(
-        chalk.red(error instanceof Error ? error.message : String(error))
+        colors.error(err instanceof Error ? err.message : String(err))
       );
       return 1;
     }
@@ -377,8 +379,8 @@ export class AICommand extends Command {
   }
 
   private async handleWizard(): Promise<number> {
-    console.log(chalk.cyan('\nLaunching Smart Generate Wizard...\n'));
-    console.log(chalk.dim('For the full wizard experience, use: skillkit generate\n'));
+    console.log(colors.cyan('\nLaunching Smart Generate Wizard...\n'));
+    console.log(colors.muted('For the full wizard experience, use: skillkit generate\n'));
 
     const { GenerateCommand } = await import('./generate.js');
     const generateCmd = new GenerateCommand();
@@ -389,31 +391,31 @@ export class AICommand extends Command {
     const detected = detectProviders();
     const defaultProvider = getDefaultProvider();
 
-    console.log(chalk.cyan('\nAvailable LLM Providers:\n'));
+    console.log(colors.cyan('\nAvailable LLM Providers:\n'));
 
     for (const provider of detected) {
       const isDefault = provider.provider === defaultProvider;
       const status = provider.configured
-        ? chalk.green('✓ Configured')
-        : chalk.dim('○ Not configured');
-      const defaultBadge = isDefault ? chalk.yellow(' (default)') : '';
+        ? colors.success('✓ Configured')
+        : colors.muted('○ Not configured');
+      const defaultBadge = isDefault ? colors.warning(' (default)') : '';
 
       console.log(`  ${provider.displayName}${defaultBadge}`);
       console.log(`    ${status}`);
       if (provider.envVar) {
-        console.log(`    ${chalk.dim(`Set ${provider.envVar} to configure`)}`);
+        console.log(`    ${colors.muted(`Set ${provider.envVar} to configure`)}`);
       }
       console.log();
     }
 
     if (defaultProvider === 'mock') {
-      console.log(`  Mock Provider${chalk.yellow(' (default)')}`);
-      console.log(`    ${chalk.green('✓ Always available')}`);
-      console.log(`    ${chalk.dim('Basic functionality without API keys')}`);
+      console.log(`  Mock Provider${colors.warning(' (default)')}`);
+      console.log(`    ${colors.success('✓ Always available')}`);
+      console.log(`    ${colors.muted('Basic functionality without API keys')}`);
       console.log();
     }
 
-    console.log(chalk.dim('Use "skillkit generate --provider <name>" to use a specific provider\n'));
+    console.log(colors.muted('Use "skillkit generate --provider <name>" to use a specific provider\n'));
 
     return 0;
   }

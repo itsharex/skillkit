@@ -2,7 +2,7 @@ import { Command, Option } from 'clipanion';
 import { resolve } from 'node:path';
 import { promises as fs } from 'fs';
 import path from 'path';
-import chalk from 'chalk';
+import { colors, warn, success } from '../onboarding/index.js';
 import { AuditLogger, type AuditQuery, type AuditEventType } from '@skillkit/core';
 
 export class AuditCommand extends Command {
@@ -104,7 +104,7 @@ export class AuditCommand extends Command {
         case 'clear':
           return await this.handleClear(logger);
         default:
-          console.error(chalk.red(`Unknown subcommand: ${this.subcommand}\n`));
+          console.error(colors.error(`Unknown subcommand: ${this.subcommand}\n`));
           console.log('Valid subcommands: log, export, stats, clear');
           return 1;
       }
@@ -123,37 +123,37 @@ export class AuditCommand extends Command {
     }
 
     if (events.length === 0) {
-      console.log(chalk.yellow('No audit events found'));
+      warn('No audit events found');
       return 0;
     }
 
-    console.log(chalk.cyan(`\nAudit Log (${events.length} entries):\n`));
+    console.log(colors.cyan(`\nAudit Log (${events.length} entries):\n`));
 
     for (const event of events) {
-      const statusIcon = event.success ? chalk.green('✓') : chalk.red('✗');
+      const statusIcon = event.success ? colors.success('✓') : colors.error('✗');
       const timestamp = event.timestamp.toLocaleString();
 
       console.log(
-        `${statusIcon} ${chalk.dim(timestamp)} ${chalk.bold(event.type)}`
+        `${statusIcon} ${colors.muted(timestamp)} ${colors.bold(event.type)}`
       );
       console.log(
-        `   ${event.action} on ${chalk.cyan(event.resource)}`
+        `   ${event.action} on ${colors.cyan(event.resource)}`
       );
 
       if (event.user) {
-        console.log(`   ${chalk.dim('User:')} ${event.user}`);
+        console.log(`   ${colors.muted('User:')} ${event.user}`);
       }
 
       if (event.duration) {
-        console.log(`   ${chalk.dim('Duration:')} ${event.duration}ms`);
+        console.log(`   ${colors.muted('Duration:')} ${event.duration}ms`);
       }
 
       if (event.error) {
-        console.log(`   ${chalk.red('Error:')} ${event.error}`);
+        console.log(`   ${colors.error('Error:')} ${event.error}`);
       }
 
       if (event.details && Object.keys(event.details).length > 0) {
-        console.log(`   ${chalk.dim('Details:')} ${JSON.stringify(event.details)}`);
+        console.log(`   ${colors.muted('Details:')} ${JSON.stringify(event.details)}`);
       }
 
       console.log();
@@ -171,7 +171,7 @@ export class AuditCommand extends Command {
     if (this.output) {
       const outputPath = resolve(this.output);
       await fs.writeFile(outputPath, content, 'utf-8');
-      console.log(chalk.green(`✓ Exported audit log to: ${outputPath}`));
+      success(`✓ Exported audit log to: ${outputPath}`);
     } else {
       console.log(content);
     }
@@ -187,14 +187,14 @@ export class AuditCommand extends Command {
       return 0;
     }
 
-    console.log(chalk.cyan('\nAudit Statistics:\n'));
-    console.log(`Total Events: ${chalk.bold(stats.totalEvents.toString())}`);
+    console.log(colors.cyan('\nAudit Statistics:\n'));
+    console.log(`Total Events: ${colors.bold(stats.totalEvents.toString())}`);
     console.log(
-      `Success Rate: ${chalk.bold(`${(stats.successRate * 100).toFixed(1)}%`)}`
+      `Success Rate: ${colors.bold(`${(stats.successRate * 100).toFixed(1)}%`)}`
     );
 
     if (Object.keys(stats.eventsByType).length > 0) {
-      console.log(chalk.cyan('\nEvents by Type:'));
+      console.log(colors.cyan('\nEvents by Type:'));
       const sorted = Object.entries(stats.eventsByType).sort(
         ([, a], [, b]) => b - a
       );
@@ -204,21 +204,21 @@ export class AuditCommand extends Command {
     }
 
     if (stats.topResources.length > 0) {
-      console.log(chalk.cyan('\nTop Resources:'));
+      console.log(colors.cyan('\nTop Resources:'));
       for (const { resource, count } of stats.topResources) {
         console.log(`  ${resource.padEnd(40)} ${count}`);
       }
     }
 
     if (stats.recentErrors.length > 0) {
-      console.log(chalk.cyan(`\nRecent Errors (${stats.recentErrors.length}):`));
-      for (const error of stats.recentErrors.slice(0, 5)) {
-        const timestamp = error.timestamp.toLocaleString();
+      console.log(colors.cyan(`\nRecent Errors (${stats.recentErrors.length}):`));
+      for (const err of stats.recentErrors.slice(0, 5)) {
+        const timestamp = err.timestamp.toLocaleString();
         console.log(
-          `  ${chalk.red('✗')} ${chalk.dim(timestamp)} ${error.type}`
+          `  ${colors.error('✗')} ${colors.muted(timestamp)} ${err.type}`
         );
-        if (error.error) {
-          console.log(`     ${chalk.dim(error.error)}`);
+        if (err.error) {
+          console.log(`     ${colors.muted(err.error)}`);
         }
       }
     }
@@ -229,7 +229,7 @@ export class AuditCommand extends Command {
 
   private async handleClear(logger: AuditLogger): Promise<number> {
     if (!this.days) {
-      console.error(chalk.red('--days option required'));
+      console.error(colors.error('--days option required'));
       return 1;
     }
 
@@ -239,11 +239,7 @@ export class AuditCommand extends Command {
 
     const cleared = await logger.clear(cutoffDate);
 
-    console.log(
-      chalk.green(
-        `✓ Cleared ${cleared} audit entries older than ${daysAgo} days`
-      )
-    );
+    success(`✓ Cleared ${cleared} audit entries older than ${daysAgo} days`);
 
     return 0;
   }

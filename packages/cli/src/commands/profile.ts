@@ -1,5 +1,5 @@
 import { Command, Option } from 'clipanion';
-import chalk from 'chalk';
+import { colors, warn, success, error } from '../onboarding/index.js';
 import {
   getActiveProfile,
   setActiveProfile,
@@ -35,48 +35,48 @@ export class ProfileCommand extends Command {
       const profile = getProfile(this.name as ProfileName);
 
       if (!profile) {
-        console.log(chalk.red(`Profile not found: ${this.name}`));
-        console.log(chalk.dim('Run `skillkit profile list` to see available profiles'));
+        error(`Profile not found: ${this.name}`);
+        console.log(colors.muted('Run `skillkit profile list` to see available profiles'));
         return 1;
       }
 
       setActiveProfile(this.name as ProfileName);
-      console.log(chalk.green(`✓ Switched to ${profile.name} mode`));
-      console.log(chalk.dim(`  Focus: ${profile.focus}`));
+      success(`✓ Switched to ${profile.name} mode`);
+      console.log(colors.muted(`  Focus: ${profile.focus}`));
       return 0;
     }
 
     const active = getActiveProfile();
     const profile = getProfile(active);
 
-    console.log(chalk.cyan(`Current Profile: ${active}\n`));
+    console.log(colors.cyan(`Current Profile: ${active}\n`));
 
     if (profile) {
       console.log(`Description: ${profile.description}`);
       console.log(`Focus: ${profile.focus}`);
       console.log();
-      console.log(chalk.bold('Behaviors:'));
+      console.log(colors.bold('Behaviors:'));
       for (const behavior of profile.behaviors) {
         console.log(`  • ${behavior}`);
       }
       console.log();
-      console.log(chalk.bold('Priorities:'));
+      console.log(colors.bold('Priorities:'));
       console.log(`  ${profile.priorities.join(' > ')}`);
 
       if (profile.preferredTools?.length) {
         console.log();
-        console.log(chalk.bold('Preferred Tools:'));
+        console.log(colors.bold('Preferred Tools:'));
         console.log(`  ${profile.preferredTools.join(', ')}`);
       }
 
       if (profile.avoidTools?.length) {
-        console.log(chalk.bold('Avoid Tools:'));
+        console.log(colors.bold('Avoid Tools:'));
         console.log(`  ${profile.avoidTools.join(', ')}`);
       }
     }
 
     console.log();
-    console.log(chalk.dim('Switch with: skillkit profile <name>'));
+    console.log(colors.muted('Switch with: skillkit profile <name>'));
 
     return 0;
   }
@@ -103,21 +103,21 @@ export class ProfileListCommand extends Command {
       return 0;
     }
 
-    console.log(chalk.cyan('Available Profiles:\n'));
+    console.log(colors.cyan('Available Profiles:\n'));
 
     for (const profile of profiles) {
       const isActive = profile.name === active;
-      const marker = isActive ? chalk.green('●') : chalk.dim('○');
-      const name = isActive ? chalk.bold(profile.name) : profile.name;
-      const type = isBuiltinProfile(profile.name) ? '' : chalk.dim(' (custom)');
+      const marker = isActive ? colors.success('●') : colors.muted('○');
+      const name = isActive ? colors.bold(profile.name) : profile.name;
+      const type = isBuiltinProfile(profile.name) ? '' : colors.muted(' (custom)');
 
       console.log(`  ${marker} ${name}${type}`);
-      console.log(`    ${chalk.dim(profile.description)}`);
+      console.log(`    ${colors.muted(profile.description)}`);
       console.log(`    Focus: ${profile.focus}`);
       console.log();
     }
 
-    console.log(chalk.dim('Switch with: skillkit profile <name>'));
+    console.log(colors.muted('Switch with: skillkit profile <name>'));
 
     return 0;
   }
@@ -149,7 +149,7 @@ export class ProfileCreateCommand extends Command {
 
   async execute(): Promise<number> {
     if (isBuiltinProfile(this.name as ProfileName)) {
-      console.log(chalk.red(`Cannot create profile: ${this.name} is a built-in profile`));
+      error(`Cannot create profile: ${this.name} is a built-in profile`);
       return 1;
     }
 
@@ -163,8 +163,8 @@ export class ProfileCreateCommand extends Command {
 
     addCustomProfile(profile);
 
-    console.log(chalk.green(`✓ Created profile: ${this.name}`));
-    console.log(chalk.dim('Edit ~/.skillkit/profiles.yaml to customize'));
+    success(`✓ Created profile: ${this.name}`);
+    console.log(colors.muted('Edit ~/.skillkit/profiles.yaml to customize'));
 
     return 0;
   }
@@ -182,18 +182,18 @@ export class ProfileRemoveCommand extends Command {
 
   async execute(): Promise<number> {
     if (isBuiltinProfile(this.name as ProfileName)) {
-      console.log(chalk.red(`Cannot remove built-in profile: ${this.name}`));
+      error(`Cannot remove built-in profile: ${this.name}`);
       return 1;
     }
 
     const removed = removeCustomProfile(this.name as ProfileName);
 
     if (!removed) {
-      console.log(chalk.yellow(`Profile not found: ${this.name}`));
+      warn(`Profile not found: ${this.name}`);
       return 1;
     }
 
-    console.log(chalk.green(`✓ Removed profile: ${this.name}`));
+    success(`✓ Removed profile: ${this.name}`);
 
     return 0;
   }

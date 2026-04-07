@@ -1,5 +1,5 @@
 import { Command, Option } from 'clipanion';
-import chalk from 'chalk';
+import { colors } from '../onboarding/index.js';
 import { SkillLineage } from '@skillkit/core';
 
 export class LineageCommand extends Command {
@@ -55,8 +55,8 @@ export class LineageCommand extends Command {
     }
 
     if (data.skills.length === 0) {
-      console.log(chalk.yellow('No skill lineage found.'));
-      console.log(chalk.dim('Lineage is built from skill execution history and activity logs.'));
+      console.log(colors.warning('No skill lineage found.'));
+      console.log(colors.muted('Lineage is built from skill execution history and activity logs.'));
       return 0;
     }
 

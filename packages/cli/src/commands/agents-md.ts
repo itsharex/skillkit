@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import chalk from 'chalk';
+import { colors, warn, success, error } from '../onboarding/index.js';
 import { Command } from 'clipanion';
 import { AgentsMdGenerator, AgentsMdParser } from '@skillkit/core';
 
@@ -40,7 +40,7 @@ export class AgentsMdInitCommand extends Command {
     const agentsPath = join(projectPath, 'AGENTS.md');
 
     if (existsSync(agentsPath)) {
-      console.log(chalk.yellow('AGENTS.md already exists. Use `skillkit agents sync` to update.'));
+      warn('AGENTS.md already exists. Use `skillkit agents sync` to update.');
       return 1;
     }
 
@@ -48,15 +48,15 @@ export class AgentsMdInitCommand extends Command {
       const generator = new AgentsMdGenerator({ projectPath });
       const result = generator.generate();
 
-      console.log(chalk.dim('Preview:'));
+      console.log(colors.muted('Preview:'));
       console.log('');
       console.log(result.content);
 
       writeFileSync(agentsPath, result.content, 'utf-8');
-      console.log(chalk.green(`Created ${agentsPath}`));
+      success(`Created ${agentsPath}`);
       return 0;
     } catch (err) {
-      console.log(chalk.red(`Failed to generate AGENTS.md: ${err instanceof Error ? err.message : String(err)}`));
+      error(`Failed to generate AGENTS.md: ${err instanceof Error ? err.message : String(err)}`);
       return 1;
     }
   }
@@ -74,7 +74,7 @@ export class AgentsMdSyncCommand extends Command {
     const agentsPath = join(projectPath, 'AGENTS.md');
 
     if (!existsSync(agentsPath)) {
-      console.log(chalk.yellow('No AGENTS.md found. Run `skillkit agents init` first.'));
+      warn('No AGENTS.md found. Run `skillkit agents init` first.');
       return 1;
     }
 
@@ -83,7 +83,7 @@ export class AgentsMdSyncCommand extends Command {
       const parser = new AgentsMdParser();
 
       if (!parser.hasManagedSections(existing)) {
-        console.log(chalk.yellow('No managed sections found in AGENTS.md. Nothing to update.'));
+        warn('No managed sections found in AGENTS.md. Nothing to update.');
         return 0;
       }
 
@@ -93,10 +93,10 @@ export class AgentsMdSyncCommand extends Command {
       const updated = parser.updateManagedSections(existing, managedSections);
 
       writeFileSync(agentsPath, updated, 'utf-8');
-      console.log(chalk.green(`Updated ${managedSections.length} managed section(s) in AGENTS.md`));
+      success(`Updated ${managedSections.length} managed section(s) in AGENTS.md`);
       return 0;
     } catch (err) {
-      console.log(chalk.red(`Failed to sync AGENTS.md: ${err instanceof Error ? err.message : String(err)}`));
+      error(`Failed to sync AGENTS.md: ${err instanceof Error ? err.message : String(err)}`);
       return 1;
     }
   }
@@ -113,7 +113,7 @@ export class AgentsMdShowCommand extends Command {
     const agentsPath = join(process.cwd(), 'AGENTS.md');
 
     if (!existsSync(agentsPath)) {
-      console.log(chalk.yellow('No AGENTS.md found. Run `skillkit agents init` to create one.'));
+      warn('No AGENTS.md found. Run `skillkit agents init` to create one.');
       return 1;
     }
 

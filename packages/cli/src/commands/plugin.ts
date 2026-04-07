@@ -8,7 +8,7 @@ import { Command, Option } from 'clipanion';
 import { join, isAbsolute, resolve, sep } from 'node:path';
 import { homedir } from 'node:os';
 import { existsSync, mkdirSync, copyFileSync, cpSync, rmSync } from 'node:fs';
-import chalk from 'chalk';
+import { colors } from '../onboarding/index.js';
 import { createPluginManager, loadPlugin, loadPluginsFromDirectory } from '@skillkit/core';
 
 export class PluginCommand extends Command {
@@ -67,12 +67,12 @@ export class PluginCommand extends Command {
         case 'info':
           return this.pluginInfo(pluginManager);
         default:
-          this.context.stderr.write(chalk.red(`Unknown action: ${this.action}\n`));
+          this.context.stderr.write(colors.error(`Unknown action: ${this.action}\n`));
           this.context.stderr.write('Available actions: list, install, uninstall, enable, disable, info\n');
           return 1;
       }
     } catch (err) {
-      this.context.stderr.write(chalk.red(`✗ ${err instanceof Error ? err.message : 'Unknown error'}\n`));
+      this.context.stderr.write(colors.error(`✗ ${err instanceof Error ? err.message : 'Unknown error'}\n`));
       return 1;
     }
   }
@@ -86,17 +86,17 @@ export class PluginCommand extends Command {
       return 0;
     }
 
-    this.context.stdout.write(chalk.cyan(`Installed Plugins (${plugins.length}):\n\n`));
+    this.context.stdout.write(colors.cyan(`Installed Plugins (${plugins.length}):\n\n`));
 
     for (const plugin of plugins) {
       const enabled = pluginManager.isPluginEnabled(plugin.name);
       const status = enabled
-        ? chalk.green('enabled')
-        : chalk.gray('disabled');
+        ? colors.success('enabled')
+        : colors.muted('disabled');
 
-      this.context.stdout.write(chalk.cyan(`  ${plugin.name}`) + ` v${plugin.version} [${status}]\n`);
+      this.context.stdout.write(colors.cyan(`  ${plugin.name}`) + ` v${plugin.version} [${status}]\n`);
       if (plugin.description) {
-        this.context.stdout.write(chalk.gray(`    ${plugin.description}\n`));
+        this.context.stdout.write(colors.muted(`    ${plugin.description}\n`));
       }
     }
 
@@ -106,7 +106,7 @@ export class PluginCommand extends Command {
     const commands = pluginManager.getAllCommands();
 
     if (translators.size > 0 || providers.size > 0 || commands.length > 0) {
-      this.context.stdout.write(chalk.cyan('\nRegistered Extensions:\n'));
+      this.context.stdout.write(colors.cyan('\nRegistered Extensions:\n'));
       if (translators.size > 0) {
         this.context.stdout.write(`  Translators: ${Array.from(translators.keys()).join(', ')}\n`);
       }
@@ -140,7 +140,7 @@ export class PluginCommand extends Command {
 
   private async installPlugin(pluginManager: ReturnType<typeof createPluginManager>): Promise<number> {
     if (!this.source) {
-      this.context.stderr.write(chalk.red('--source is required for install\n'));
+      this.context.stderr.write(colors.error('--source is required for install\n'));
       return 1;
     }
 
@@ -156,7 +156,7 @@ export class PluginCommand extends Command {
     // Validate plugin name from metadata
     const pluginName = plugin.metadata.name;
     if (!this.isValidPluginName(pluginName)) {
-      this.context.stderr.write(chalk.red(`Invalid plugin name: ${pluginName}\n`));
+      this.context.stderr.write(colors.error(`Invalid plugin name: ${pluginName}\n`));
       return 1;
     }
 
@@ -184,7 +184,7 @@ export class PluginCommand extends Command {
       const resolvedTarget = resolve(targetDir);
       const resolvedPluginsDir = resolve(pluginsDir);
       if (!resolvedTarget.startsWith(resolvedPluginsDir + sep)) {
-        this.context.stderr.write(chalk.red('Invalid plugin name\n'));
+        this.context.stderr.write(colors.error('Invalid plugin name\n'));
         return 1;
       }
 
@@ -217,12 +217,12 @@ export class PluginCommand extends Command {
         copyFileSync(resolvedSource, join(targetDir, destFileName));
       }
 
-      this.context.stdout.write(chalk.dim(`  Copied to ${targetDir}\n`));
+      this.context.stdout.write(colors.muted(`  Copied to ${targetDir}\n`));
     }
 
     await pluginManager.register(plugin);
 
-    this.context.stdout.write(chalk.green(`✓ Plugin "${plugin.metadata.name}" installed!\n`));
+    this.context.stdout.write(colors.success(`✓ Plugin "${plugin.metadata.name}" installed!\n`));
     this.context.stdout.write(`  Version: ${plugin.metadata.version}\n`);
     if (plugin.metadata.description) {
       this.context.stdout.write(`  ${plugin.metadata.description}\n`);
@@ -244,13 +244,13 @@ export class PluginCommand extends Command {
 
   private async uninstallPlugin(pluginManager: ReturnType<typeof createPluginManager>): Promise<number> {
     if (!this.name) {
-      this.context.stderr.write(chalk.red('--name is required for uninstall\n'));
+      this.context.stderr.write(colors.error('--name is required for uninstall\n'));
       return 1;
     }
 
     // Validate plugin name to prevent path traversal attacks
     if (!this.isValidPluginName(this.name)) {
-      this.context.stderr.write(chalk.red('Invalid plugin name\n'));
+      this.context.stderr.write(colors.error('Invalid plugin name\n'));
       return 1;
     }
 
@@ -269,57 +269,57 @@ export class PluginCommand extends Command {
     const resolvedPluginDir = resolve(pluginDir);
     const resolvedPluginsDir = resolve(pluginsDir);
     if (!resolvedPluginDir.startsWith(resolvedPluginsDir + sep)) {
-      this.context.stderr.write(chalk.red('Invalid plugin name\n'));
+      this.context.stderr.write(colors.error('Invalid plugin name\n'));
       return 1;
     }
 
     if (existsSync(pluginDir)) {
       rmSync(pluginDir, { recursive: true, force: true });
-      this.context.stdout.write(chalk.dim(`  Removed ${pluginDir}\n`));
+      this.context.stdout.write(colors.muted(`  Removed ${pluginDir}\n`));
     }
 
-    this.context.stdout.write(chalk.green(`✓ Plugin "${this.name}" uninstalled.\n`));
+    this.context.stdout.write(colors.success(`✓ Plugin "${this.name}" uninstalled.\n`));
     return 0;
   }
 
   private enablePlugin(pluginManager: ReturnType<typeof createPluginManager>): number {
     if (!this.name) {
-      this.context.stderr.write(chalk.red('--name is required for enable\n'));
+      this.context.stderr.write(colors.error('--name is required for enable\n'));
       return 1;
     }
 
     pluginManager.enablePlugin(this.name);
-    this.context.stdout.write(chalk.green(`✓ Plugin "${this.name}" enabled.\n`));
+    this.context.stdout.write(colors.success(`✓ Plugin "${this.name}" enabled.\n`));
     return 0;
   }
 
   private disablePlugin(pluginManager: ReturnType<typeof createPluginManager>): number {
     if (!this.name) {
-      this.context.stderr.write(chalk.red('--name is required for disable\n'));
+      this.context.stderr.write(colors.error('--name is required for disable\n'));
       return 1;
     }
 
     pluginManager.disablePlugin(this.name);
-    this.context.stdout.write(chalk.green(`✓ Plugin "${this.name}" disabled.\n`));
+    this.context.stdout.write(colors.success(`✓ Plugin "${this.name}" disabled.\n`));
     return 0;
   }
 
   private pluginInfo(pluginManager: ReturnType<typeof createPluginManager>): number {
     if (!this.name) {
-      this.context.stderr.write(chalk.red('--name is required for info\n'));
+      this.context.stderr.write(colors.error('--name is required for info\n'));
       return 1;
     }
 
     const plugin = pluginManager.getPlugin(this.name);
     if (!plugin) {
-      this.context.stderr.write(chalk.red(`Plugin "${this.name}" not found.\n`));
+      this.context.stderr.write(colors.error(`Plugin "${this.name}" not found.\n`));
       return 1;
     }
 
     const { metadata } = plugin;
     const enabled = pluginManager.isPluginEnabled(this.name);
 
-    this.context.stdout.write(chalk.cyan(`${metadata.name}`) + ` v${metadata.version}\n`);
+    this.context.stdout.write(colors.cyan(`${metadata.name}`) + ` v${metadata.version}\n`);
     this.context.stdout.write(`Status: ${enabled ? 'enabled' : 'disabled'}\n`);
     if (metadata.description) {
       this.context.stdout.write(`Description: ${metadata.description}\n`);

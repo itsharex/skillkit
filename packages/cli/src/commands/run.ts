@@ -1,8 +1,7 @@
 import { Command, Option } from 'clipanion';
 import { resolve, join } from 'node:path';
 import { existsSync, readFileSync, statSync } from 'node:fs';
-import chalk from 'chalk';
-import ora from 'ora';
+import { colors, step, success, error, spinner } from '../onboarding/index.js';
 import {
   createExecutionEngine,
   discoverSkills,
@@ -89,22 +88,20 @@ export class RunCommand extends Command {
       return 1;
     }
 
-    // Show skill info
     if (!this.json) {
-      console.log(chalk.cyan(`Executing skill: ${chalk.bold(skill.name)}`));
+      step(`Executing skill: ${colors.bold(skill.name)}`);
       if (skill.description) {
-        console.log(chalk.dim(skill.description));
+        console.log(colors.muted(skill.description));
       }
       console.log();
     }
 
-    // Dry run mode
     if (this.dryRun) {
       this.showDryRun(skill);
       return 0;
     }
 
-    const spinner = ora();
+    const oraSpinner = spinner();
     let currentTask = '';
 
     // Create execution engine
@@ -115,38 +112,38 @@ export class RunCommand extends Command {
         switch (event.type) {
           case 'task_start':
             currentTask = event.taskName || '';
-            spinner.start(`Task ${(event.taskIndex || 0) + 1}/${event.totalTasks}: ${currentTask}`);
+            oraSpinner.start(`Task ${(event.taskIndex || 0) + 1}/${event.totalTasks}: ${currentTask}`);
             break;
 
-          case 'task_complete':
-            const icon = event.status === 'completed' ? chalk.green('✓') : chalk.red('✗');
-            spinner.stopAndPersist({
-              symbol: icon,
-              text: `Task ${(event.taskIndex || 0) + 1}/${event.totalTasks}: ${currentTask}`,
-            });
+          case 'task_complete': {
+            const icon = event.status === 'completed' ? colors.success('✓') : colors.error('✗');
+            oraSpinner.stop();
+            console.log(`${icon} Task ${(event.taskIndex || 0) + 1}/${event.totalTasks}: ${currentTask}`);
             if (event.error && this.verbose) {
-              console.log(chalk.red(`    Error: ${event.error}`));
+              console.log(colors.error(`    Error: ${event.error}`));
             }
             break;
+          }
 
           case 'checkpoint':
-            spinner.info(`Checkpoint: ${event.message}`);
+            oraSpinner.stop();
+            console.log(`Checkpoint: ${event.message}`);
             break;
 
           case 'verification':
             if (this.verbose) {
-              console.log(chalk.dim(`    ${event.message}`));
+              console.log(colors.muted(`    ${event.message}`));
             }
             break;
 
           case 'complete':
             console.log();
             if (event.status === 'completed') {
-              console.log(chalk.green('✓ Skill execution completed'));
+              success('✓ Skill execution completed');
             } else {
-              console.log(chalk.red(`✗ Skill execution ${event.status}`));
+              error(`✗ Skill execution ${event.status}`);
               if (event.error) {
-                console.log(chalk.red(`  Error: ${event.error}`));
+                console.log(colors.error(`  Error: ${event.error}`));
               }
             }
             break;
@@ -176,18 +173,17 @@ export class RunCommand extends Command {
     if (this.json) {
       console.log(JSON.stringify(result, null, 2));
     } else {
-      // Show summary
       console.log();
-      console.log(chalk.cyan('Summary:'));
-      console.log(`  Duration: ${chalk.dim(this.formatDuration(result.durationMs || 0))}`);
-      console.log(`  Tasks: ${chalk.dim(`${result.tasks.filter(t => t.status === 'completed').length}/${result.tasks.length} completed`)}`);
+      step('Summary:');
+      console.log(`  Duration: ${colors.muted(this.formatDuration(result.durationMs || 0))}`);
+      console.log(`  Tasks: ${colors.muted(`${result.tasks.filter(t => t.status === 'completed').length}/${result.tasks.length} completed`)}`);
 
       if (result.filesModified.length > 0) {
-        console.log(`  Files modified: ${chalk.dim(result.filesModified.length.toString())}`);
+        console.log(`  Files modified: ${colors.muted(result.filesModified.length.toString())}`);
       }
 
       if (result.commits.length > 0) {
-        console.log(`  Commits: ${chalk.dim(result.commits.join(', '))}`);
+        console.log(`  Commits: ${colors.muted(result.commits.join(', '))}`);
       }
     }
 
@@ -206,14 +202,14 @@ export class RunCommand extends Command {
       return skill;
     }
 
-    console.error(chalk.red(`Skill "${this.skillRef}" not found`));
-    console.log(chalk.dim('Install skills with: skillkit install <source>'));
+    console.error(colors.error(`Skill "${this.skillRef}" not found`));
+    console.log(colors.muted('Install skills with: skillkit install <source>'));
     return null;
   }
 
   private loadSkillFromFile(filePath: string): ExecutableSkill | null {
     if (!existsSync(filePath)) {
-      console.error(chalk.red(`File not found: ${filePath}`));
+      console.error(colors.error(`File not found: ${filePath}`));
       return null;
     }
 
@@ -221,7 +217,6 @@ export class RunCommand extends Command {
       const content = readFileSync(filePath, 'utf-8');
       const frontmatter = extractFrontmatter(content);
 
-      // Parse tasks from frontmatter if present
       const tasks = this.parseTasksFromFrontmatter(frontmatter);
 
       return {
@@ -232,8 +227,8 @@ export class RunCommand extends Command {
         content,
         tasks,
       };
-    } catch (error) {
-      console.error(chalk.red(`Failed to load skill: ${error}`));
+    } catch (err) {
+      console.error(colors.error(`Failed to load skill: ${err}`));
       return null;
     }
   }
@@ -281,46 +276,46 @@ export class RunCommand extends Command {
   }
 
   private showDryRun(skill: ExecutableSkill): void {
-    console.log(chalk.cyan('Dry Run - Execution Plan'));
+    step('Dry Run - Execution Plan');
     console.log();
-    console.log(`Skill: ${chalk.bold(skill.name)}`);
+    console.log(`Skill: ${colors.bold(skill.name)}`);
     if (skill.description) {
-      console.log(`Description: ${chalk.dim(skill.description)}`);
+      console.log(`Description: ${colors.muted(skill.description)}`);
     }
-    console.log(`Source: ${chalk.dim(skill.source)}`);
+    console.log(`Source: ${colors.muted(skill.source)}`);
     console.log();
 
     if (skill.tasks && skill.tasks.length > 0) {
-      console.log(chalk.cyan('Tasks:'));
+      step('Tasks:');
       for (let i = 0; i < skill.tasks.length; i++) {
         const task = skill.tasks[i];
         const typeLabel = this.getTaskTypeLabel(task.type);
         console.log(`  ${i + 1}. ${task.name} ${typeLabel}`);
         if (task.action) {
-          console.log(`     ${chalk.dim(task.action)}`);
+          console.log(`     ${colors.muted(task.action)}`);
         }
         if (task.files && task.files.length > 0) {
-          console.log(`     Files: ${chalk.dim(task.files.join(', '))}`);
+          console.log(`     Files: ${colors.muted(task.files.join(', '))}`);
         }
       }
     } else {
-      console.log(chalk.dim('No structured tasks defined. Skill will be executed as a single unit.'));
+      console.log(colors.muted('No structured tasks defined. Skill will be executed as a single unit.'));
     }
 
     console.log();
-    console.log(chalk.dim('This is a dry run. Remove --dry-run to execute.'));
+    console.log(colors.muted('This is a dry run. Remove --dry-run to execute.'));
   }
 
   private getTaskTypeLabel(type: string): string {
     switch (type) {
       case 'auto':
-        return chalk.green('[auto]');
+        return colors.success('[auto]');
       case 'checkpoint:human-verify':
-        return chalk.yellow('[verify]');
+        return colors.warning('[verify]');
       case 'checkpoint:decision':
-        return chalk.blue('[decision]');
+        return colors.info('[decision]');
       case 'checkpoint:human-action':
-        return chalk.magenta('[manual]');
+        return colors.magenta('[manual]');
       default:
         return '';
     }

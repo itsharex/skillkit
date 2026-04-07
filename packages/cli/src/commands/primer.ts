@@ -1,6 +1,6 @@
 import { Command, Option } from 'clipanion';
 import { resolve } from 'node:path';
-import chalk from 'chalk';
+import { colors, warn, error, step } from '../onboarding/index.js';
 import {
   type AgentType,
   AgentType as AgentTypeSchema,
@@ -96,7 +96,7 @@ export class PrimerCommand extends Command {
   }
 
   private async runLearn(projectPath: string): Promise<number> {
-    console.log(chalk.cyan('Analyzing codebase and extracting patterns...\n'));
+    step('Analyzing codebase and extracting patterns...\n');
 
     const analysis = analyzePrimer(projectPath);
     if (this.verbose) {
@@ -104,7 +104,7 @@ export class PrimerCommand extends Command {
       console.log();
     }
 
-    console.log(chalk.bold('Analyzing git history for patterns...\n'));
+    console.log(colors.bold('Analyzing git history for patterns...\n'));
 
     const gitResult = analyzeGitHistory(projectPath, {
       commits: this.commits ? parseInt(this.commits) : 100,
@@ -116,35 +116,35 @@ export class PrimerCommand extends Command {
     console.log();
 
     if (gitResult.patterns.length === 0) {
-      console.log(chalk.yellow('No learnable patterns found.'));
+      warn('No learnable patterns found.');
       return 0;
     }
 
-    console.log(chalk.bold(`Extracted ${gitResult.patterns.length} patterns:\n`));
+    console.log(colors.bold(`Extracted ${gitResult.patterns.length} patterns:\n`));
 
     for (const pattern of gitResult.patterns.slice(0, 10)) {
-      const confidence = chalk.blue(`${(pattern.confidence * 100).toFixed(0)}%`);
-      console.log(`  ${chalk.dim('○')} ${pattern.title} [${pattern.category}] ${confidence}`);
+      const confidence = colors.info(`${(pattern.confidence * 100).toFixed(0)}%`);
+      console.log(`  ${colors.muted('○')} ${pattern.title} [${pattern.category}] ${confidence}`);
       addPattern(pattern);
     }
 
     if (gitResult.patterns.length > 10) {
-      console.log(chalk.dim(`  ... and ${gitResult.patterns.length - 10} more saved`));
+      console.log(colors.muted(`  ... and ${gitResult.patterns.length - 10} more saved`));
       for (const pattern of gitResult.patterns.slice(10)) {
         addPattern(pattern);
       }
     }
 
     console.log();
-    console.log(chalk.green(`✓ Saved ${gitResult.patterns.length} patterns`));
-    console.log(chalk.dim('View with: skillkit learn --show'));
-    console.log(chalk.dim('Approve with: skillkit pattern approve <id>'));
+    console.log(colors.success(`✓ Saved ${gitResult.patterns.length} patterns`));
+    console.log(colors.muted('View with: skillkit learn --show'));
+    console.log(colors.muted('Approve with: skillkit pattern approve <id>'));
 
     return 0;
   }
 
   private async runAnalysis(projectPath: string): Promise<number> {
-    console.log(chalk.cyan('Analyzing codebase...\n'));
+    step('Analyzing codebase...\n');
 
     try {
       const analysis = analyzePrimer(projectPath);
@@ -156,8 +156,8 @@ export class PrimerCommand extends Command {
 
       this.printAnalysis(analysis);
       return 0;
-    } catch (error) {
-      console.error(chalk.red('Analysis failed:'), error instanceof Error ? error.message : error);
+    } catch (err) {
+      error('Analysis failed: ' + (err instanceof Error ? err.message : String(err)));
       return 1;
     }
   }
@@ -165,7 +165,7 @@ export class PrimerCommand extends Command {
   private async runGenerate(projectPath: string): Promise<number> {
     const agents = this.parseAgents();
 
-    console.log(chalk.cyan('Analyzing codebase and generating AI instructions...\n'));
+    step('Analyzing codebase and generating AI instructions...\n');
 
     try {
       const result = generatePrimer(projectPath, {
@@ -183,37 +183,37 @@ export class PrimerCommand extends Command {
       }
 
       if (result.generated.length === 0) {
-        console.log(chalk.yellow('No instruction files generated.'));
+        warn('No instruction files generated.');
         if (result.errors.length > 0) {
-          for (const error of result.errors) {
-            console.log(chalk.red(`  Error: ${error}`));
+          for (const errMsg of result.errors) {
+            console.log(colors.error(`  Error: ${errMsg}`));
           }
         }
         return 1;
       }
 
-      console.log(chalk.bold('Generated Instruction Files:\n'));
+      console.log(colors.bold('Generated Instruction Files:\n'));
 
       for (const instruction of result.generated) {
-        const status = this.dryRun ? chalk.yellow('(dry-run)') : chalk.green('created');
-        console.log(`  ${chalk.green('●')} ${chalk.bold(instruction.agent)}`);
-        console.log(`    ${chalk.gray(instruction.filepath)} ${status}`);
+        const status = this.dryRun ? colors.warning('(dry-run)') : colors.success('created');
+        console.log(`  ${colors.success('●')} ${colors.bold(instruction.agent)}`);
+        console.log(`    ${colors.muted(instruction.filepath)} ${status}`);
       }
 
       console.log();
 
       if (result.warnings.length > 0) {
-        console.log(chalk.yellow('Warnings:'));
-        for (const warning of result.warnings) {
-          console.log(`  ${chalk.yellow('⚠')} ${warning}`);
+        console.log(colors.warning('Warnings:'));
+        for (const warningMsg of result.warnings) {
+          console.log(`  ${colors.warning('⚠')} ${warningMsg}`);
         }
         console.log();
       }
 
       if (result.errors.length > 0) {
-        console.log(chalk.red('Errors:'));
-        for (const error of result.errors) {
-          console.log(`  ${chalk.red('✗')} ${error}`);
+        console.log(colors.error('Errors:'));
+        for (const errMsg of result.errors) {
+          console.log(`  ${colors.error('✗')} ${errMsg}`);
         }
         console.log();
       }
@@ -222,15 +222,15 @@ export class PrimerCommand extends Command {
         ? `Would generate ${result.generated.length} instruction file(s)`
         : `Generated ${result.generated.length} instruction file(s)`;
 
-      console.log(chalk.bold(summary));
+      console.log(colors.bold(summary));
 
       if (this.dryRun) {
-        console.log(chalk.gray('\n(Dry run - no files were written)'));
+        console.log(colors.muted('\n(Dry run - no files were written)'));
       }
 
       return result.success ? 0 : 1;
-    } catch (error) {
-      console.error(chalk.red('Generation failed:'), error instanceof Error ? error.message : error);
+    } catch (err) {
+      error('Generation failed: ' + (err instanceof Error ? err.message : String(err)));
       return 1;
     }
   }
@@ -246,7 +246,7 @@ export class PrimerCommand extends Command {
       if (result.success) {
         agents.push(result.data);
       } else {
-        console.warn(chalk.yellow(`Unknown agent: ${part}`));
+        warn(`Unknown agent: ${part}`);
       }
     }
 
@@ -256,8 +256,8 @@ export class PrimerCommand extends Command {
   private printAnalysis(analysis: ReturnType<typeof analyzePrimer>): void {
     const { project, languages, packageManagers, stack, structure, conventions, ci, docker, buildCommands, importantFiles } = analysis;
 
-    console.log(chalk.bold('Project Information'));
-    console.log(`  Name: ${chalk.cyan(project.name)}`);
+    console.log(colors.bold('Project Information'));
+    console.log(`  Name: ${colors.cyan(project.name)}`);
     if (project.description) {
       console.log(`  Description: ${project.description}`);
     }
@@ -270,67 +270,67 @@ export class PrimerCommand extends Command {
     console.log();
 
     if (languages.length > 0) {
-      console.log(chalk.bold('Languages'));
+      console.log(colors.bold('Languages'));
       for (const lang of languages) {
         const version = lang.version ? ` (${lang.version})` : '';
-        console.log(`  ${chalk.green('●')} ${lang.name}${version}`);
+        console.log(`  ${colors.success('●')} ${lang.name}${version}`);
       }
       console.log();
     }
 
     if (packageManagers.length > 0) {
-      console.log(chalk.bold('Package Managers'));
-      console.log(`  ${chalk.cyan(packageManagers.join(', '))}`);
+      console.log(colors.bold('Package Managers'));
+      console.log(`  ${colors.cyan(packageManagers.join(', '))}`);
       console.log();
     }
 
     if (stack.frameworks.length > 0) {
-      console.log(chalk.bold('Frameworks'));
+      console.log(colors.bold('Frameworks'));
       for (const fw of stack.frameworks) {
         const version = fw.version ? ` (${fw.version})` : '';
-        console.log(`  ${chalk.green('●')} ${fw.name}${version}`);
+        console.log(`  ${colors.success('●')} ${fw.name}${version}`);
       }
       console.log();
     }
 
     if (stack.libraries.length > 0) {
-      console.log(chalk.bold('Libraries'));
+      console.log(colors.bold('Libraries'));
       for (const lib of stack.libraries.slice(0, 10)) {
         const version = lib.version ? ` (${lib.version})` : '';
-        console.log(`  ${chalk.green('●')} ${lib.name}${version}`);
+        console.log(`  ${colors.success('●')} ${lib.name}${version}`);
       }
       if (stack.libraries.length > 10) {
-        console.log(`  ${chalk.gray(`...and ${stack.libraries.length - 10} more`)}`);
+        console.log(`  ${colors.muted(`...and ${stack.libraries.length - 10} more`)}`);
       }
       console.log();
     }
 
     if (stack.styling.length > 0) {
-      console.log(chalk.bold('Styling'));
+      console.log(colors.bold('Styling'));
       for (const style of stack.styling) {
-        console.log(`  ${chalk.green('●')} ${style.name}`);
+        console.log(`  ${colors.success('●')} ${style.name}`);
       }
       console.log();
     }
 
     if (stack.testing.length > 0) {
-      console.log(chalk.bold('Testing'));
+      console.log(colors.bold('Testing'));
       for (const test of stack.testing) {
-        console.log(`  ${chalk.green('●')} ${test.name}`);
+        console.log(`  ${colors.success('●')} ${test.name}`);
       }
       console.log();
     }
 
     if (stack.databases.length > 0) {
-      console.log(chalk.bold('Databases'));
+      console.log(colors.bold('Databases'));
       for (const db of stack.databases) {
-        console.log(`  ${chalk.green('●')} ${db.name}`);
+        console.log(`  ${colors.success('●')} ${db.name}`);
       }
       console.log();
     }
 
     if (structure) {
-      console.log(chalk.bold('Project Structure'));
+      console.log(colors.bold('Project Structure'));
       if (structure.type) {
         console.log(`  Type: ${structure.type}`);
       }
@@ -350,7 +350,7 @@ export class PrimerCommand extends Command {
     }
 
     if (conventions && Object.keys(conventions).some(k => conventions[k as keyof typeof conventions] !== undefined)) {
-      console.log(chalk.bold('Code Conventions'));
+      console.log(colors.bold('Code Conventions'));
       if (conventions.indentation) {
         console.log(`  Indentation: ${conventions.indentation}`);
       }
@@ -367,7 +367,7 @@ export class PrimerCommand extends Command {
     }
 
     if (ci && ci.hasCI) {
-      console.log(chalk.bold('CI/CD'));
+      console.log(colors.bold('CI/CD'));
       console.log(`  Provider: ${ci.provider}`);
       if (ci.hasCD) {
         console.log(`  Deployment: Yes`);
@@ -376,7 +376,7 @@ export class PrimerCommand extends Command {
     }
 
     if (docker && (docker.hasDockerfile || docker.hasCompose)) {
-      console.log(chalk.bold('Docker'));
+      console.log(colors.bold('Docker'));
       if (docker.hasDockerfile) {
         console.log(`  Dockerfile: Yes`);
         if (docker.baseImage) {
@@ -390,35 +390,35 @@ export class PrimerCommand extends Command {
     }
 
     if (buildCommands && Object.keys(buildCommands).some(k => buildCommands[k as keyof typeof buildCommands])) {
-      console.log(chalk.bold('Build Commands'));
+      console.log(colors.bold('Build Commands'));
       if (buildCommands.install) {
-        console.log(`  Install: ${chalk.gray(buildCommands.install)}`);
+        console.log(`  Install: ${colors.muted(buildCommands.install)}`);
       }
       if (buildCommands.dev) {
-        console.log(`  Dev: ${chalk.gray(buildCommands.dev)}`);
+        console.log(`  Dev: ${colors.muted(buildCommands.dev)}`);
       }
       if (buildCommands.build) {
-        console.log(`  Build: ${chalk.gray(buildCommands.build)}`);
+        console.log(`  Build: ${colors.muted(buildCommands.build)}`);
       }
       if (buildCommands.test) {
-        console.log(`  Test: ${chalk.gray(buildCommands.test)}`);
+        console.log(`  Test: ${colors.muted(buildCommands.test)}`);
       }
       console.log();
     }
 
     if (importantFiles.length > 0 && this.verbose) {
-      console.log(chalk.bold('Important Files'));
+      console.log(colors.bold('Important Files'));
       for (const file of importantFiles.slice(0, 15)) {
-        console.log(`  ${chalk.gray(file)}`);
+        console.log(`  ${colors.muted(file)}`);
       }
       if (importantFiles.length > 15) {
-        console.log(`  ${chalk.gray(`...and ${importantFiles.length - 15} more`)}`);
+        console.log(`  ${colors.muted(`...and ${importantFiles.length - 15} more`)}`);
       }
       console.log();
     }
 
-    console.log(chalk.bold('Available Agents'));
-    console.log(chalk.gray(`  Use --all-agents to generate for all ${Object.keys(AGENT_CONFIG).length} agents`));
-    console.log(chalk.gray(`  Use --agent <name> to generate for specific agents`));
+    console.log(colors.bold('Available Agents'));
+    console.log(colors.muted(`  Use --all-agents to generate for all ${Object.keys(AGENT_CONFIG).length} agents`));
+    console.log(colors.muted(`  Use --agent <name> to generate for specific agents`));
   }
 }

@@ -1,5 +1,5 @@
 import { Command, Option } from 'clipanion';
-import chalk from 'chalk';
+import { colors, warn } from '../onboarding/index.js';
 import { ActivityLog } from '@skillkit/core';
 
 export class ActivityCommand extends Command {
@@ -42,16 +42,16 @@ export class ActivityCommand extends Command {
     }
 
     if (activities.length === 0) {
-      console.log(chalk.yellow('No activity recorded'));
+      warn('No activity recorded');
       console.log(
-        chalk.dim(
+        colors.muted(
           'Activity is recorded when skills are active during git commits.'
         )
       );
       return 0;
     }
 
-    console.log(chalk.cyan('  Recent Skill Activity\n'));
+    console.log(colors.cyan('  Recent Skill Activity\n'));
 
     const displayed = activities.slice(0, limit);
 
@@ -61,10 +61,10 @@ export class ActivityCommand extends Command {
       const files = activity.filesChanged.join(', ');
       const ago = formatTimeAgo(activity.committedAt);
 
-      console.log(`    ${chalk.bold(shortSha)}  ${activity.message}`);
-      console.log(`             Skills: ${chalk.green(skills)}`);
+      console.log(`    ${colors.bold(shortSha)}  ${activity.message}`);
+      console.log(`             Skills: ${colors.success(skills)}`);
       console.log(
-        `             Files: ${files} ${chalk.dim(`(${ago})`)}`
+        `             Files: ${files} ${colors.muted(`(${ago})`)}`
       );
       console.log();
     }

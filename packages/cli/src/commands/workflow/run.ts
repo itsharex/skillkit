@@ -1,7 +1,6 @@
 import { Command, Option } from 'clipanion';
 import { resolve } from 'node:path';
-import chalk from 'chalk';
-import ora from 'ora';
+import { colors, success, error as errorFn, spinner } from '../../onboarding/index.js';
 import {
   loadWorkflowByName,
   loadWorkflow,
@@ -87,25 +86,25 @@ export class WorkflowRunCommand extends Command {
       } else if (this.workflowName) {
         workflow = loadWorkflowByName(targetPath, this.workflowName);
         if (!workflow) {
-          console.error(chalk.red(`Workflow "${this.workflowName}" not found`));
-          console.log(chalk.dim('List available workflows: skillkit workflow list'));
+          errorFn(`Workflow "${this.workflowName}" not found`);
+          console.log(colors.muted('List available workflows: skillkit workflow list'));
           return 1;
         }
       } else {
-        console.error(chalk.red('Please specify a workflow name or --file'));
+        errorFn('Please specify a workflow name or --file');
         return 1;
       }
-    } catch (error) {
-      console.error(chalk.red(`Failed to load workflow: ${error}`));
+    } catch (err) {
+      errorFn(`Failed to load workflow: ${err}`);
       return 1;
     }
 
     // Validate workflow
     const validation = validateWorkflow(workflow);
     if (!validation.valid) {
-      console.error(chalk.red('Invalid workflow:'));
-      for (const error of validation.errors) {
-        console.error(chalk.red(`  • ${error}`));
+      errorFn('Invalid workflow:');
+      for (const validationError of validation.errors) {
+        errorFn(`  • ${validationError}`);
       }
       return 1;
     }
@@ -117,13 +116,13 @@ export class WorkflowRunCommand extends Command {
     }
 
     // Execute workflow
-    console.log(chalk.cyan(`Executing workflow: ${chalk.bold(workflow.name)}`));
+    console.log(colors.cyan(`Executing workflow: ${colors.bold(workflow.name)}`));
     if (workflow.description) {
-      console.log(chalk.dim(workflow.description));
+      console.log(colors.muted(workflow.description));
     }
     console.log();
 
-    const spinner = ora();
+    const spin = spinner();
     let currentWave = -1;
 
     // Create the skill executor (real or simulated)
@@ -132,7 +131,7 @@ export class WorkflowRunCommand extends Command {
           delay: 500,
           onExecute: (skillName) => {
             if (this.verbose && !this.json) {
-              console.log(chalk.dim(`  [Simulated] ${skillName}`));
+              console.log(colors.muted(`  [Simulated] ${skillName}`));
             }
           },
         })
@@ -144,17 +143,17 @@ export class WorkflowRunCommand extends Command {
             if (this.verbose && !this.json) {
               switch (event.type) {
                 case 'skill_found':
-                  console.log(chalk.dim(`  Found: ${event.message}`));
+                  console.log(colors.muted(`  Found: ${event.message}`));
                   break;
                 case 'skill_not_found':
-                  console.log(chalk.red(`  Not found: ${event.skillName}`));
+                  console.log(colors.error(`  Not found: ${event.skillName}`));
                   break;
                 case 'agent_selected':
-                  console.log(chalk.dim(`  Agent: ${event.agent}`));
+                  console.log(colors.muted(`  Agent: ${event.agent}`));
                   break;
                 case 'execution_complete':
                   if (!event.success) {
-                    console.log(chalk.red(`  Error: ${event.error}`));
+                    console.log(colors.error(`  Error: ${event.error}`));
                   }
                   break;
               }
@@ -171,38 +170,34 @@ export class WorkflowRunCommand extends Command {
         switch (event.type) {
           case 'wave_start':
             currentWave = event.waveIndex || 0;
-            spinner.start(`Wave ${currentWave + 1}: ${event.waveName || 'Executing...'}`);
+            spin.start(`Wave ${currentWave + 1}: ${event.waveName || 'Executing...'}`);
             break;
 
           case 'skill_start':
             if (this.verbose) {
-              spinner.text = `Wave ${currentWave + 1}: Running ${event.skillName}...`;
+              spin.message(`Wave ${currentWave + 1}: Running ${event.skillName}...`);
             }
             break;
 
           case 'skill_complete':
             if (this.verbose) {
-              const icon = event.status === 'completed' ? chalk.green('✓') : chalk.red('✗');
+              const icon = event.status === 'completed' ? colors.success('✓') : colors.error('✗');
               console.log(`  ${icon} ${event.skillName}`);
             }
             break;
 
           case 'wave_complete':
-            const waveIcon = event.status === 'completed' ? chalk.green('✓') : chalk.red('✗');
-            spinner.stopAndPersist({
-              symbol: waveIcon,
-              text: `Wave ${(event.waveIndex || 0) + 1}: ${event.waveName || 'Complete'}`,
-            });
+            spin.stop(`Wave ${(event.waveIndex || 0) + 1}: ${event.waveName || 'Complete'}`);
             break;
 
           case 'workflow_complete':
             console.log();
             if (event.status === 'completed') {
-              console.log(chalk.green('✓ Workflow completed successfully'));
+              success('✓ Workflow completed successfully');
             } else {
-              console.log(chalk.red(`✗ Workflow ${event.status}`));
+              errorFn(`✗ Workflow ${event.status}`);
               if (event.error) {
-                console.log(chalk.red(`  Error: ${event.error}`));
+                errorFn(`  Error: ${event.error}`);
               }
             }
             break;
@@ -220,19 +215,19 @@ export class WorkflowRunCommand extends Command {
   }
 
   private showDryRun(workflow: { name: string; description?: string; waves: Array<{ name?: string; parallel: boolean; skills: Array<string | { skill: string }> }> }): void {
-    console.log(chalk.cyan('Dry Run - Workflow Execution Plan'));
+    console.log(colors.cyan('Dry Run - Workflow Execution Plan'));
     console.log();
-    console.log(`Workflow: ${chalk.bold(workflow.name)}`);
+    console.log(`Workflow: ${colors.bold(workflow.name)}`);
     if (workflow.description) {
-      console.log(`Description: ${chalk.dim(workflow.description)}`);
+      console.log(`Description: ${colors.muted(workflow.description)}`);
     }
     console.log();
 
     for (let i = 0; i < workflow.waves.length; i++) {
       const wave = workflow.waves[i];
-      const modeLabel = wave.parallel ? chalk.blue('[parallel]') : chalk.yellow('[sequential]');
+      const modeLabel = wave.parallel ? colors.info('[parallel]') : colors.warning('[sequential]');
 
-      console.log(`${chalk.cyan(`Wave ${i + 1}`)}: ${wave.name || 'Unnamed'} ${modeLabel}`);
+      console.log(`${colors.cyan(`Wave ${i + 1}`)}: ${wave.name || 'Unnamed'} ${modeLabel}`);
 
       for (const skill of wave.skills) {
         const skillName = typeof skill === 'string' ? skill : skill.skill;
@@ -242,7 +237,7 @@ export class WorkflowRunCommand extends Command {
       console.log();
     }
 
-    console.log(chalk.dim('This is a dry run. No skills were executed.'));
-    console.log(chalk.dim('Remove --dry-run to execute the workflow.'));
+    console.log(colors.muted('This is a dry run. No skills were executed.'));
+    console.log(colors.muted('Remove --dry-run to execute the workflow.'));
   }
 }
