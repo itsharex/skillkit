@@ -146,11 +146,13 @@ export class InstallCommand extends Command {
         return this.listSkills(discoveredSkills, cloneResult);
       }
 
-      const skillsToInstall = await this.selectSkills(discoveredSkills, isInteractive);
-      if (!skillsToInstall) return 0;
+      const skillSelection = await this.selectSkills(discoveredSkills, isInteractive);
+      if (!skillSelection.skills) return skillSelection.exitCode;
+      const skillsToInstall = skillSelection.skills;
 
-      const targetAgents = await this.selectAgents(isInteractive);
-      if (!targetAgents) return 0;
+      const agentSelection = await this.selectAgents(isInteractive);
+      if (!agentSelection.agents) return agentSelection.exitCode;
+      const targetAgents = agentSelection.agents;
 
       const installMethod = await this.selectMethod(isInteractive, targetAgents);
       if (!installMethod) return 0;
@@ -274,7 +276,7 @@ export class InstallCommand extends Command {
   private async selectSkills(
     discoveredSkills: Array<{ name: string; dirName: string; path: string }>,
     isInteractive: boolean,
-  ): Promise<Array<{ name: string; dirName: string; path: string }> | null> {
+  ): Promise<{ skills: Array<{ name: string; dirName: string; path: string }> | null; exitCode: number }> {
     if (this.skills) {
       const requestedSkills = this.skills.split(",").map((s) => s.trim());
       const available = discoveredSkills.map((s) => s.name);
@@ -283,14 +285,14 @@ export class InstallCommand extends Command {
       if (notFound.length > 0) {
         error(`Skills not found: ${notFound.join(", ")}`);
         console.log(colors.muted(`Available: ${available.join(", ")}`));
-        return null;
+        return { skills: null, exitCode: 1 };
       }
 
-      return discoveredSkills.filter((s) => requestedSkills.includes(s.name));
+      return { skills: discoveredSkills.filter((s) => requestedSkills.includes(s.name)), exitCode: 0 };
     }
 
     if (this.all || this.yes) {
-      return discoveredSkills;
+      return { skills: discoveredSkills, exitCode: 0 };
     }
 
     if (isInteractive && discoveredSkills.length > 1) {
@@ -302,31 +304,31 @@ export class InstallCommand extends Command {
 
       if (isCancel(skillResult)) {
         cancel("Installation cancelled");
-        return null;
+        return { skills: null, exitCode: 0 };
       }
 
       const selected = (skillResult as { skills: string[] }).skills;
       const result = discoveredSkills.filter((s) => selected.includes(s.name));
       if (result.length === 0) {
         warn("No skills to install");
-        return null;
+        return { skills: null, exitCode: 0 };
       }
-      return result;
+      return { skills: result, exitCode: 0 };
     }
 
-    return discoveredSkills;
+    return { skills: discoveredSkills, exitCode: 0 };
   }
 
-  private async selectAgents(isInteractive: boolean): Promise<AgentType[] | null> {
+  private async selectAgents(isInteractive: boolean): Promise<{ agents: AgentType[] | null; exitCode: number }> {
     if (this.agent && this.agent.length > 0) {
       const allValid = getAllAdapters().map((a) => a.type);
       const invalid = this.agent.filter((a) => !allValid.includes(a as AgentType));
       if (invalid.length > 0) {
         error(`Unknown agent(s): ${invalid.join(", ")}`);
         console.log(colors.muted(`Available: ${allValid.join(", ")}`));
-        return null;
+        return { agents: null, exitCode: 1 };
       }
-      return this.agent as AgentType[];
+      return { agents: this.agent as AgentType[], exitCode: 0 };
     }
 
     if (isInteractive) {
@@ -343,16 +345,16 @@ export class InstallCommand extends Command {
 
       if (isCancel(agentResult)) {
         cancel("Installation cancelled");
-        return null;
+        return { agents: null, exitCode: 0 };
       }
 
       const targetAgents = (agentResult as { agents: string[] }).agents as AgentType[];
       saveLastAgents(targetAgents);
-      return targetAgents;
+      return { agents: targetAgents, exitCode: 0 };
     }
 
     const detectedAgent = await detectAgent();
-    return [detectedAgent];
+    return { agents: [detectedAgent], exitCode: 0 };
   }
 
   private async selectMethod(

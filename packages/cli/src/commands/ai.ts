@@ -179,7 +179,7 @@ export class AICommand extends Command {
 
       return 0;
     } catch (err) {
-      s.stop('Search failed', 1);
+      s.stop(colors.error('Search failed'));
       console.error(
         colors.error(err instanceof Error ? err.message : String(err))
       );
@@ -271,7 +271,7 @@ export class AICommand extends Command {
 
       return 0;
     } catch (err) {
-      s.stop('Generation failed', 1);
+      s.stop(colors.error('Generation failed'));
       console.error(
         colors.error(err instanceof Error ? err.message : String(err))
       );
@@ -355,7 +355,7 @@ export class AICommand extends Command {
 
       return 0;
     } catch (err) {
-      s.stop('Search failed', 1);
+      s.stop(colors.error('Search failed'));
       console.error(
         colors.error(err instanceof Error ? err.message : String(err))
       );
