@@ -1,10 +1,9 @@
-import { execFileSync } from "node:child_process";
 import { existsSync, rmSync } from "node:fs";
 import { join, basename } from "node:path";
 import { tmpdir } from "node:os";
 import { randomUUID } from "node:crypto";
 import type { GitProviderAdapter, CloneOptions } from "./base.js";
-import { parseShorthand, isGitUrl } from "./base.js";
+import { parseShorthand, isGitUrl, cloneRepo } from "./base.js";
 import type { GitProvider, CloneResult } from "../types.js";
 import { discoverSkills } from "../skills.js";
 
@@ -69,19 +68,7 @@ export class GitHubProvider implements GitProviderAdapter {
     const tempDir = join(tmpdir(), `skillkit-${randomUUID()}`);
 
     try {
-      const args = ["clone"];
-      if (options.depth) {
-        args.push("--depth", String(options.depth));
-      }
-      if (options.branch) {
-        args.push("--branch", options.branch);
-      }
-      args.push(cloneUrl, tempDir);
-
-      execFileSync("git", args, {
-        stdio: ["pipe", "pipe", "pipe"],
-        encoding: "utf-8",
-      });
+      await cloneRepo(cloneUrl, tempDir, { ...options, subpath });
 
       const searchDir = subpath ? join(tempDir, subpath) : tempDir;
       const skills = discoverSkills(searchDir);

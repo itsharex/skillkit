@@ -1,5 +1,5 @@
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
-import { join, basename, resolve, sep } from 'node:path';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { join, basename, dirname, resolve, sep } from 'node:path';
 import { parse as parseYaml } from 'yaml';
 import { SkillFrontmatter, SkillMetadata, type Skill, type SkillLocation } from './types.js';
 
@@ -274,7 +274,10 @@ export function extractField(content: string, field: string): string | null {
 }
 
 export function loadMetadata(skillPath: string): SkillMetadata | null {
-  const metadataPath = join(skillPath, '.skillkit.json');
+  const isFile = skillPath.endsWith('.md') && existsSync(skillPath) && statSync(skillPath).isFile();
+  const metadataPath = isFile
+    ? join(dirname(skillPath), `.${basename(skillPath, '.md')}.skillkit.json`)
+    : join(skillPath, '.skillkit.json');
 
   if (!existsSync(metadataPath)) {
     return null;
@@ -311,10 +314,17 @@ export function findSkill(name: string, searchDirs: string[]): Skill | null {
   for (const dir of searchDirs) {
     if (!existsSync(dir)) continue;
 
+    const location: SkillLocation = isPathInside(dir, process.cwd()) ? 'project' : 'global';
+
     const skillPath = join(dir, name);
     if (existsSync(skillPath)) {
-      const location: SkillLocation = dir.includes(process.cwd()) ? 'project' : 'global';
-      return parseSkill(skillPath, location);
+      const skill = parseSkill(skillPath, location);
+      if (skill) return skill;
+    }
+
+    const mdPath = join(dir, name.endsWith('.md') ? name : `${name}.md`);
+    if (existsSync(mdPath)) {
+      return parseStandaloneSkill(mdPath, location);
     }
   }
 
@@ -328,7 +338,7 @@ export function findAllSkills(searchDirs: string[]): Skill[] {
   for (const dir of searchDirs) {
     if (!existsSync(dir)) continue;
 
-    const location: SkillLocation = dir.includes(process.cwd()) ? 'project' : 'global';
+    const location: SkillLocation = isPathInside(dir, process.cwd()) ? 'project' : 'global';
     const discovered = discoverSkills(dir);
 
     for (const skill of discovered) {

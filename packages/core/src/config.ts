@@ -1,11 +1,18 @@
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
-import { join, dirname } from 'node:path';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, statSync } from 'node:fs';
+import { join, dirname, basename } from 'node:path';
 import { homedir } from 'node:os';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import { SkillkitConfig, type AgentType, type SkillMetadata, type AgentAdapterInfo } from './types.js';
 
 const CONFIG_FILE = 'skillkit.yaml';
 const METADATA_FILE = '.skillkit.json';
+
+function metadataPathFor(skillPath: string): string {
+  if (skillPath.endsWith('.md') && existsSync(skillPath) && statSync(skillPath).isFile()) {
+    return join(dirname(skillPath), `.${basename(skillPath, '.md')}.skillkit.json`);
+  }
+  return join(skillPath, METADATA_FILE);
+}
 
 export function getProjectConfigPath(): string {
   return join(process.cwd(), CONFIG_FILE);
@@ -110,12 +117,12 @@ export function getAgentConfigPath(adapter: AgentAdapterInfo): string {
 }
 
 export function saveSkillMetadata(skillPath: string, metadata: SkillMetadata): void {
-  const metadataPath = join(skillPath, METADATA_FILE);
+  const metadataPath = metadataPathFor(skillPath);
   writeFileSync(metadataPath, JSON.stringify(metadata, null, 2), 'utf-8');
 }
 
 export function loadSkillMetadata(skillPath: string): SkillMetadata | null {
-  const metadataPath = join(skillPath, METADATA_FILE);
+  const metadataPath = metadataPathFor(skillPath);
 
   if (!existsSync(metadataPath)) {
     return null;

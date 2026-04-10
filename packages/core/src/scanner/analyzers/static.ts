@@ -58,6 +58,47 @@ function ruleMatchesFileType(rule: SecurityRule, fileType: string | undefined): 
   return rule.fileTypes.includes(fileType);
 }
 
+function stripMarkdownCodeAndFrontmatter(content: string): string {
+  const lines = content.split('\n');
+  let fenceDelimiter: string | null = null;
+  let inFrontmatter = false;
+  let frontmatterDone = false;
+
+  if (lines.length > 0 && /^---\s*$/.test(lines[0].trim())) {
+    const hasCloser = lines.slice(1).some((l) => /^---\s*$/.test(l.trim()));
+    if (hasCloser) {
+      inFrontmatter = true;
+    }
+  }
+
+  return lines.map((line, i) => {
+    const trimmed = line.trim();
+
+    if (inFrontmatter && !frontmatterDone) {
+      if (i > 0 && /^---\s*$/.test(trimmed)) {
+        inFrontmatter = false;
+        frontmatterDone = true;
+      }
+      return '';
+    }
+
+    const fenceMatch = trimmed.match(/^(`{3,}|~{3,})/);
+    if (fenceMatch) {
+      const char = fenceMatch[1][0];
+      if (fenceDelimiter === null) {
+        fenceDelimiter = char;
+        return line;
+      } else if (char === fenceDelimiter) {
+        fenceDelimiter = null;
+        return line;
+      }
+    }
+    if (fenceDelimiter !== null) return '';
+
+    return line;
+  }).join('\n');
+}
+
 function matchesExcludePatterns(line: string, rule: SecurityRule): boolean {
   if (!rule.excludePatterns) return false;
   return rule.excludePatterns.some((p) => p.test(line));
@@ -93,6 +134,10 @@ export class StaticAnalyzer implements Analyzer {
         content = await readFile(file, 'utf-8');
       } catch {
         continue;
+      }
+
+      if (fileType === 'markdown') {
+        content = stripMarkdownCodeAndFrontmatter(content);
       }
 
       const lines = content.split('\n');

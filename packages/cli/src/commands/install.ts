@@ -4,6 +4,7 @@ import {
   cpSync,
   rmSync,
   symlinkSync,
+  statSync,
   readFileSync,
   writeFileSync,
 } from "node:fs";
@@ -133,7 +134,7 @@ export class InstallCommand extends Command {
     const s = spinner();
 
     try {
-      if (isInteractive && !this.quiet) {
+      if (process.stdin.isTTY && !this.quiet) {
         welcome();
       }
 
@@ -235,8 +236,13 @@ export class InstallCommand extends Command {
     }
 
     if (!result) {
-      s.start(`Fetching from ${providerAdapter.name}...`);
-      result = await providerAdapter.clone(this.source, "", { depth: 1 });
+      s.start(`Cloning from ${providerAdapter.name}...`);
+      result = await providerAdapter.clone(this.source, "", {
+        depth: 1,
+        onProgress: (msg) => {
+          s.message(`${providerAdapter!.name} — ${msg}`);
+        },
+      });
 
       if (!result.success || !result.path) {
         s.stop(colors.error(result.error || "Failed to fetch source"));
@@ -466,7 +472,18 @@ export class InstallCommand extends Command {
           mkdirSync(installDir, { recursive: true });
         }
 
-        const targetPath = join(installDir, skillName);
+        let isStandaloneFile: boolean;
+        try {
+          isStandaloneFile = statSync(sourcePath).isFile();
+        } catch {
+          if (!this.quiet) {
+            warn(`Skipping ${skillName} for ${adapter.name} (source not accessible)`);
+          }
+          continue;
+        }
+        const targetPath = isStandaloneFile
+          ? join(installDir, skillName.endsWith(".md") ? skillName : `${skillName}.md`)
+          : join(installDir, skillName);
 
         if (existsSync(targetPath) && !this.force) {
           if (!this.quiet) {
@@ -492,25 +509,31 @@ export class InstallCommand extends Command {
           }
 
           if (useSymlink && primaryPath) {
-            symlinkSync(primaryPath, targetPath, "dir");
+            symlinkSync(primaryPath, targetPath, isStandaloneFile ? "file" : "dir");
           } else {
-            cpSync(sourcePath, targetPath, { recursive: true, dereference: true });
+            if (isStandaloneFile) {
+              cpSync(sourcePath, targetPath);
+            } else {
+              cpSync(sourcePath, targetPath, { recursive: true, dereference: true });
+            }
             if (isSymlinkMode && primaryPath === null) {
               primaryPath = targetPath;
             }
 
-            const packageJsonPath = join(targetPath, "package.json");
-            if (existsSync(packageJsonPath)) {
-              s.stop(`Installed ${skillName} to ${adapter.name}`);
-              s.start(`Installing npm dependencies for ${skillName}...`);
-              try {
-                await execFileAsync("npm", ["install", "--omit=dev"], { cwd: targetPath });
-                s.stop(`Installed dependencies for ${skillName}`);
-              } catch {
-                s.stop(colors.warning(`Dependencies failed for ${skillName}`));
-                console.log(colors.muted("Run manually: npm install in " + targetPath));
+            if (!isStandaloneFile) {
+              const packageJsonPath = join(targetPath, "package.json");
+              if (existsSync(packageJsonPath)) {
+                s.stop(`Installed ${skillName} to ${adapter.name}`);
+                s.start(`Installing npm dependencies for ${skillName}...`);
+                try {
+                  await execFileAsync("npm", ["install", "--omit=dev"], { cwd: targetPath });
+                  s.stop(`Installed dependencies for ${skillName}`);
+                } catch {
+                  s.stop(colors.warning(`Dependencies failed for ${skillName}`));
+                  console.log(colors.muted("Run manually: npm install in " + targetPath));
+                }
+                s.start(`Finishing ${skillName} installation...`);
               }
-              s.start(`Finishing ${skillName} installation...`);
             }
           }
 

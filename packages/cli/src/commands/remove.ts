@@ -1,8 +1,8 @@
 import { existsSync, rmSync, readFileSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, dirname, basename } from 'node:path';
 import { colors, warn, success, error } from '../onboarding/index.js';
 import { Command, Option } from 'clipanion';
-import { findSkill, AgentsMdParser, AgentsMdGenerator } from '@skillkit/core';
+import { findSkill, findAllSkills, loadMetadata, AgentsMdParser, AgentsMdGenerator } from '@skillkit/core';
 import { getSearchDirs } from '../helpers.js';
 
 export class RemoveCommand extends Command {
@@ -13,11 +13,21 @@ export class RemoveCommand extends Command {
     examples: [
       ['Remove a skill', '$0 remove pdf'],
       ['Remove multiple skills', '$0 remove pdf xlsx docx'],
-      ['Force removal without confirmation', '$0 remove pdf --force'],
+      ['Remove all skills from a source', '$0 remove --source iii-hq/iii'],
+      ['Remove all installed skills', '$0 remove --all'],
+      ['Force removal without confirmation', '$0 remove --all --force'],
     ],
   });
 
-  skills = Option.Rest({ required: 1 });
+  skills = Option.Rest({ required: 0 });
+
+  all = Option.Boolean('--all,-a', false, {
+    description: 'Remove all installed skills',
+  });
+
+  source = Option.String('--source,-s', {
+    description: 'Remove all skills installed from this source (e.g. iii-hq/iii)',
+  });
 
   force = Option.Boolean('--force,-f', false, {
     description: 'Skip confirmation',
@@ -25,24 +35,59 @@ export class RemoveCommand extends Command {
 
   async execute(): Promise<number> {
     const searchDirs = getSearchDirs();
+
+    if (!this.all && !this.source && this.skills.length === 0) {
+      error('Provide skill names, --source, or --all');
+      return 1;
+    }
+
+    let skillsToRemove: Array<{ name: string; path: string }> = [];
+
+    if (this.all || this.source) {
+      const allSkills = findAllSkills(searchDirs);
+      if (this.source) {
+        skillsToRemove = allSkills.filter((s) => {
+          const meta = loadMetadata(s.path);
+          return meta?.source?.includes(this.source!) ?? false;
+        }).map((s) => ({ name: s.name, path: s.path }));
+        if (skillsToRemove.length === 0) {
+          warn(`No skills found from source: ${this.source}`);
+          return 0;
+        }
+      } else {
+        skillsToRemove = allSkills.map((s) => ({ name: s.name, path: s.path }));
+        if (skillsToRemove.length === 0) {
+          warn('No installed skills found');
+          return 0;
+        }
+      }
+      console.log(colors.muted(`Found ${skillsToRemove.length} skill(s) to remove`));
+    } else {
+      for (const skillName of this.skills) {
+        const skill = findSkill(skillName, searchDirs);
+        if (!skill) {
+          warn(`Skill not found: ${skillName}`);
+          continue;
+        }
+        skillsToRemove.push({ name: skill.name, path: skill.path });
+      }
+    }
+
     let removed = 0;
     let failed = 0;
 
-    for (const skillName of this.skills) {
-      const skill = findSkill(skillName, searchDirs);
-
-      if (!skill) {
-        warn(`Skill not found: ${skillName}`);
-        continue;
-      }
-
-      if (!existsSync(skill.path)) {
-        warn(`Path not found: ${skill.path}`);
+    for (const { name: skillName, path: skillPath } of skillsToRemove) {
+      if (!existsSync(skillPath)) {
+        warn(`Path not found: ${skillPath}`);
         continue;
       }
 
       try {
-        rmSync(skill.path, { recursive: true, force: true });
+        rmSync(skillPath, { recursive: true, force: true });
+        if (skillPath.endsWith('.md')) {
+          const metaSibling = join(dirname(skillPath), `.${basename(skillPath, '.md')}.skillkit.json`);
+          if (existsSync(metaSibling)) rmSync(metaSibling);
+        }
         success(`Removed: ${skillName}`);
         removed++;
       } catch (err) {
