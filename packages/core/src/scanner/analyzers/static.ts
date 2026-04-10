@@ -60,7 +60,7 @@ function ruleMatchesFileType(rule: SecurityRule, fileType: string | undefined): 
 
 function stripMarkdownCodeAndFrontmatter(content: string): string {
   const lines = content.split('\n');
-  let inCodeBlock = false;
+  let fenceDelimiter: string | null = null;
   let inFrontmatter = false;
   let frontmatterDone = false;
 
@@ -82,11 +82,18 @@ function stripMarkdownCodeAndFrontmatter(content: string): string {
       return '';
     }
 
-    if (/^(`{3,}|~{3,})/.test(trimmed)) {
-      inCodeBlock = !inCodeBlock;
-      return line;
+    const fenceMatch = trimmed.match(/^(`{3,}|~{3,})/);
+    if (fenceMatch) {
+      const char = fenceMatch[1][0];
+      if (fenceDelimiter === null) {
+        fenceDelimiter = char;
+        return line;
+      } else if (char === fenceDelimiter) {
+        fenceDelimiter = null;
+        return line;
+      }
     }
-    if (inCodeBlock) return '';
+    if (fenceDelimiter !== null) return '';
 
     return line;
   }).join('\n');

@@ -48,7 +48,7 @@ export class RemoveCommand extends Command {
       if (this.source) {
         skillsToRemove = allSkills.filter((s) => {
           const meta = loadMetadata(s.path);
-          return meta && meta.source.includes(this.source!);
+          return meta?.source?.includes(this.source!) ?? false;
         }).map((s) => ({ name: s.name, path: s.path }));
         if (skillsToRemove.length === 0) {
           warn(`No skills found from source: ${this.source}`);

@@ -314,11 +314,12 @@ export function findSkill(name: string, searchDirs: string[]): Skill | null {
   for (const dir of searchDirs) {
     if (!existsSync(dir)) continue;
 
-    const location: SkillLocation = dir.includes(process.cwd()) ? 'project' : 'global';
+    const location: SkillLocation = isPathInside(dir, process.cwd()) ? 'project' : 'global';
 
     const skillPath = join(dir, name);
     if (existsSync(skillPath)) {
-      return parseSkill(skillPath, location);
+      const skill = parseSkill(skillPath, location);
+      if (skill) return skill;
     }
 
     const mdPath = join(dir, name.endsWith('.md') ? name : `${name}.md`);
@@ -337,7 +338,7 @@ export function findAllSkills(searchDirs: string[]): Skill[] {
   for (const dir of searchDirs) {
     if (!existsSync(dir)) continue;
 
-    const location: SkillLocation = dir.includes(process.cwd()) ? 'project' : 'global';
+    const location: SkillLocation = isPathInside(dir, process.cwd()) ? 'project' : 'global';
     const discovered = discoverSkills(dir);
 
     for (const skill of discovered) {

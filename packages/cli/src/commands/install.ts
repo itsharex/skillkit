@@ -472,7 +472,15 @@ export class InstallCommand extends Command {
           mkdirSync(installDir, { recursive: true });
         }
 
-        const isStandaloneFile = statSync(sourcePath).isFile();
+        let isStandaloneFile: boolean;
+        try {
+          isStandaloneFile = statSync(sourcePath).isFile();
+        } catch {
+          if (!this.quiet) {
+            warn(`Skipping ${skillName} for ${adapter.name} (source not accessible)`);
+          }
+          continue;
+        }
         const targetPath = isStandaloneFile
           ? join(installDir, skillName.endsWith(".md") ? skillName : `${skillName}.md`)
           : join(installDir, skillName);

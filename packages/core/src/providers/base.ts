@@ -104,27 +104,34 @@ export async function cloneRepo(
     }
 
     if (partialCloneOk) {
-      execFileSync('git', ['-C', tempDir, 'sparse-checkout', 'init', '--cone'], {
-        stdio: ['pipe', 'pipe', 'pipe'],
-      });
+      try {
+        execFileSync('git', ['-C', tempDir, 'sparse-checkout', 'init', '--cone'], {
+          stdio: ['pipe', 'pipe', 'pipe'],
+        });
 
-      const sparsePaths = [...SKILL_DISCOVERY_PATHS];
-      if (options.subpath) {
-        sparsePaths.push(options.subpath);
-        for (const dp of SKILL_DISCOVERY_PATHS) {
-          sparsePaths.push(`${options.subpath}/${dp}`);
+        const sparsePaths = [...SKILL_DISCOVERY_PATHS];
+        if (options.subpath) {
+          sparsePaths.push(options.subpath);
+          for (const dp of SKILL_DISCOVERY_PATHS) {
+            sparsePaths.push(`${options.subpath}/${dp}`);
+          }
+        }
+        execFileSync(
+          'git',
+          ['-C', tempDir, 'sparse-checkout', 'set', '--', ...sparsePaths],
+          { stdio: ['pipe', 'pipe', 'pipe'] },
+        );
+
+        options.onProgress?.('Checking out files');
+        await spawnGit(['-C', tempDir, 'checkout'], options.onProgress);
+
+        return;
+      } catch {
+        options.onProgress?.('Sparse checkout failed, falling back to full clone');
+        if (existsSync(tempDir)) {
+          rmSync(tempDir, { recursive: true, force: true });
         }
       }
-      execFileSync(
-        'git',
-        ['-C', tempDir, 'sparse-checkout', 'set', '--', ...sparsePaths],
-        { stdio: ['pipe', 'pipe', 'pipe'] },
-      );
-
-      options.onProgress?.('Checking out files');
-      await spawnGit(['-C', tempDir, 'checkout'], options.onProgress);
-
-      return;
     }
   }
 
