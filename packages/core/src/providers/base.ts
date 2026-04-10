@@ -54,7 +54,7 @@ function spawnGit(args: string[]): Promise<void>;
 function spawnGit(args: string[], onProgress: (msg: string) => void): Promise<void>;
 function spawnGit(args: string[], onProgress?: (msg: string) => void): Promise<void> {
   return new Promise<void>((resolve, reject) => {
-    const proc = spawn('git', args, { stdio: ['pipe', 'pipe', 'pipe'] });
+    const proc = spawn('git', args, { stdio: ['pipe', 'ignore', 'pipe'] });
     let stderr = '';
 
     proc.stderr?.on('data', (data: Buffer) => {
@@ -118,7 +118,8 @@ export async function cloneRepo(
       await spawnGit(['-C', tempDir, 'checkout'], options.onProgress ?? (() => {}));
 
       return;
-    } catch {
+    } catch (err) {
+      options.onProgress?.(`Partial clone unsupported, falling back to full clone`);
       if (existsSync(tempDir)) {
         rmSync(tempDir, { recursive: true, force: true });
       }

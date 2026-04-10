@@ -64,25 +64,27 @@ function stripMarkdownCodeAndFrontmatter(content: string): string {
   let inFrontmatter = false;
   let frontmatterDone = false;
 
+  if (lines.length > 0 && /^---\s*$/.test(lines[0].trim())) {
+    const hasCloser = lines.slice(1).some((l) => /^---\s*$/.test(l.trim()));
+    if (hasCloser) {
+      inFrontmatter = true;
+    }
+  }
+
   return lines.map((line, i) => {
     const trimmed = line.trim();
 
-    if (!frontmatterDone && /^---\s*$/.test(trimmed)) {
-      if (!inFrontmatter && i < 2) {
-        inFrontmatter = true;
-        return '';
-      }
-      if (inFrontmatter) {
+    if (inFrontmatter && !frontmatterDone) {
+      if (i > 0 && /^---\s*$/.test(trimmed)) {
         inFrontmatter = false;
         frontmatterDone = true;
-        return '';
       }
+      return '';
     }
-    if (inFrontmatter) return '';
 
     if (/^(`{3,}|~{3,})/.test(trimmed)) {
       inCodeBlock = !inCodeBlock;
-      return '';
+      return line;
     }
     if (inCodeBlock) return '';
 
