@@ -50,8 +50,6 @@ function parseGitProgress(text: string): string | null {
   return null;
 }
 
-function spawnGit(args: string[]): Promise<void>;
-function spawnGit(args: string[], onProgress: (msg: string) => void): Promise<void>;
 function spawnGit(args: string[], onProgress?: (msg: string) => void): Promise<void> {
   return new Promise<void>((resolve, reject) => {
     const proc = spawn('git', args, { stdio: ['pipe', 'ignore', 'pipe'] });
@@ -96,7 +94,7 @@ export async function cloneRepo(
 
     let partialCloneOk = false;
     try {
-      await spawnGit(partialArgs, options.onProgress ?? (() => {}));
+      await spawnGit(partialArgs, options.onProgress);
       partialCloneOk = true;
     } catch {
       options.onProgress?.('Partial clone unsupported, falling back to full clone');
@@ -124,14 +122,14 @@ export async function cloneRepo(
       );
 
       options.onProgress?.('Checking out files');
-      await spawnGit(['-C', tempDir, 'checkout'], options.onProgress ?? (() => {}));
+      await spawnGit(['-C', tempDir, 'checkout'], options.onProgress);
 
       return;
     }
   }
 
   args.push(cloneUrl, tempDir);
-  await spawnGit(args, options.onProgress ?? (() => {}));
+  await spawnGit(args, options.onProgress);
 }
 
 export function parseShorthand(source: string): { owner: string; repo: string; subpath?: string } | null {
