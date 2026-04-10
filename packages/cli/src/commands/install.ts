@@ -134,7 +134,7 @@ export class InstallCommand extends Command {
     const s = spinner();
 
     try {
-      if (isInteractive && !this.quiet) {
+      if (process.stdin.isTTY && !this.quiet) {
         welcome();
       }
 
