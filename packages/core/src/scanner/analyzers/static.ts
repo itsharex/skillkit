@@ -58,6 +58,38 @@ function ruleMatchesFileType(rule: SecurityRule, fileType: string | undefined): 
   return rule.fileTypes.includes(fileType);
 }
 
+function stripMarkdownCodeAndFrontmatter(content: string): string {
+  const lines = content.split('\n');
+  let inCodeBlock = false;
+  let inFrontmatter = false;
+  let frontmatterDone = false;
+
+  return lines.map((line, i) => {
+    const trimmed = line.trim();
+
+    if (!frontmatterDone && /^---\s*$/.test(trimmed)) {
+      if (!inFrontmatter && i < 2) {
+        inFrontmatter = true;
+        return '';
+      }
+      if (inFrontmatter) {
+        inFrontmatter = false;
+        frontmatterDone = true;
+        return '';
+      }
+    }
+    if (inFrontmatter) return '';
+
+    if (/^(`{3,}|~{3,})/.test(trimmed)) {
+      inCodeBlock = !inCodeBlock;
+      return '';
+    }
+    if (inCodeBlock) return '';
+
+    return line;
+  }).join('\n');
+}
+
 function matchesExcludePatterns(line: string, rule: SecurityRule): boolean {
   if (!rule.excludePatterns) return false;
   return rule.excludePatterns.some((p) => p.test(line));
@@ -93,6 +125,10 @@ export class StaticAnalyzer implements Analyzer {
         content = await readFile(file, 'utf-8');
       } catch {
         continue;
+      }
+
+      if (fileType === 'markdown') {
+        content = stripMarkdownCodeAndFrontmatter(content);
       }
 
       const lines = content.split('\n');
