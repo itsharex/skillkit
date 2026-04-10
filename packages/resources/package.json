@@ -1,6 +1,6 @@
 {
   "name": "@skillkit/resources",
-  "version": "1.19.2",
+  "version": "1.20.0",
   "description": "Bundled resources for SkillKit - agents, commands, profiles, guidelines, and hooks",
   "type": "module",
   "main": "./dist/index.js",
