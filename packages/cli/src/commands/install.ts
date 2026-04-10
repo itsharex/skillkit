@@ -235,8 +235,13 @@ export class InstallCommand extends Command {
     }
 
     if (!result) {
-      s.start(`Fetching from ${providerAdapter.name}...`);
-      result = await providerAdapter.clone(this.source, "", { depth: 1 });
+      s.start(`Cloning from ${providerAdapter.name}...`);
+      result = await providerAdapter.clone(this.source, "", {
+        depth: 1,
+        onProgress: (msg) => {
+          s.message(`${providerAdapter!.name} — ${msg}`);
+        },
+      });
 
       if (!result.success || !result.path) {
         s.stop(colors.error(result.error || "Failed to fetch source"));
