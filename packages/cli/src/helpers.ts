@@ -48,3 +48,35 @@ export function formatCount(count: number): string {
   if (count >= 1_000) return `${(count / 1_000).toFixed(1)}K`;
   return String(count);
 }
+
+export function timeAgo(dateStr: string): string {
+  const now = Date.now();
+  const then = new Date(dateStr).getTime();
+  if (Number.isNaN(then)) return 'unknown';
+  const days = Math.floor((now - then) / 86_400_000);
+  if (days === 0) return 'today';
+  if (days === 1) return 'yesterday';
+  if (days < 30) return `${days}d ago`;
+  if (days < 365) return `${Math.floor(days / 30)}mo ago`;
+  return `${Math.floor(days / 365)}y ago`;
+}
+
+export async function fetchGitHubActivity(
+  owner: string,
+  repo: string,
+): Promise<{ stars: number; pushedAt: string | null } | null> {
+  try {
+    const response = await fetch(
+      `https://api.github.com/repos/${owner}/${repo}`,
+      { signal: AbortSignal.timeout(5000) },
+    );
+    if (!response.ok) return null;
+    const data = (await response.json()) as Record<string, unknown>;
+    return {
+      stars: typeof data.stargazers_count === 'number' ? data.stargazers_count : 0,
+      pushedAt: typeof data.pushed_at === 'string' ? data.pushed_at : null,
+    };
+  } catch {
+    return null;
+  }
+}

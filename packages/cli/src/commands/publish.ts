@@ -7,7 +7,15 @@ import {
   statSync,
 } from "node:fs";
 import { join, basename, dirname, resolve, sep } from "node:path";
-import { colors, warn, success, error, step } from "../onboarding/index.js";
+import {
+  colors,
+  warn,
+  success,
+  error,
+  step,
+  formatQualityBadge,
+  getQualityGradeFromScore,
+} from "../onboarding/index.js";
 import { Command, Option } from "clipanion";
 import {
   generateWellKnownIndex,
@@ -15,7 +23,9 @@ import {
   SkillScanner,
   formatSummary,
   Severity,
+  evaluateSkillDirectory,
 } from "@skillkit/core";
+import { formatCount, timeAgo, fetchGitHubActivity } from "../helpers.js";
 
 function sanitizeSkillName(name: string): string | null {
   if (!name || typeof name !== "string") return null;
@@ -480,6 +490,14 @@ export class PublishSubmitCommand extends Command {
       return 1;
     }
 
+    const skillDir = dirname(skillMdPath);
+    const quality = evaluateSkillDirectory(skillDir);
+    const qualityScore = quality?.overall ?? null;
+    const qualityGrade = qualityScore !== null ? getQualityGradeFromScore(qualityScore) : null;
+    const qualityBadge = qualityScore !== null ? formatQualityBadge(qualityScore) : "N/A";
+
+    const activity = await fetchGitHubActivity(repoInfo.owner, repoInfo.repo);
+
     const skillEntry = {
       id: `${repoInfo.owner}/${repoInfo.repo}/${skillSlug}`,
       name: this.formatName(skillName),
@@ -496,6 +514,19 @@ export class PublishSubmitCommand extends Command {
     console.log(colors.muted(`  Description: ${skillEntry.description}`));
     console.log(colors.muted(`  Source: ${skillEntry.source}`));
     console.log(colors.muted(`  Tags: ${skillEntry.tags.join(", ")}`));
+    console.log(colors.muted(`  Quality: ${qualityBadge}${qualityScore !== null ? ` (${qualityScore}/100)` : ""}`));
+    if (activity) {
+      const stars = formatCount(activity.stars);
+      const pushed = activity.pushedAt ? timeAgo(activity.pushedAt) : "unknown";
+      console.log(colors.muted(`  Stars: ${stars}`));
+      console.log(colors.muted(`  Last push: ${pushed}`));
+    }
+    if (quality && quality.warnings.length > 0) {
+      console.log(colors.warning(`  Warnings:`));
+      for (const w of quality.warnings.slice(0, 3)) {
+        console.log(colors.muted(`    - ${w}`));
+      }
+    }
     console.log();
 
     if (this.dryRun) {
@@ -504,33 +535,61 @@ export class PublishSubmitCommand extends Command {
       return 0;
     }
 
-    const issueBody = this.createIssueBody(skillEntry);
-    const issueTitle = encodeURIComponent(`[Publish] ${skillEntry.name}`);
-    const issueBodyEncoded = encodeURIComponent(issueBody);
-    const issueUrl = `https://github.com/rohitg00/skillkit/issues/new?title=${issueTitle}&body=${issueBodyEncoded}&labels=skill-submission,publish`;
-
-    success("Opening GitHub to submit your skill...\n");
+    const issueBody = this.createIssueBody(skillEntry, {
+      qualityScore,
+      qualityGrade,
+      warnings: quality?.warnings ?? [],
+      stars: activity?.stars ?? null,
+      pushedAt: activity?.pushedAt ?? null,
+    });
 
     try {
       const { execFileSync } = await import("node:child_process");
-      const cmd =
-        process.platform === "darwin"
-          ? "open"
-          : process.platform === "win32"
-            ? "cmd"
-            : "xdg-open";
-      const args =
-        process.platform === "win32"
-          ? ["/c", "start", "", issueUrl]
-          : [issueUrl];
-      execFileSync(cmd, args, { stdio: "ignore" });
+      const result = execFileSync(
+        "gh",
+        [
+          "issue",
+          "create",
+          "--repo",
+          "rohitg00/skillkit",
+          "--title",
+          `[Publish] ${skillEntry.name}`,
+          "--body",
+          issueBody,
+          "--label",
+          "skill-submission,publish",
+        ],
+        {
+          encoding: "utf-8",
+          stdio: ["pipe", "pipe", "pipe"],
+          timeout: 15_000,
+        },
+      ).trim();
 
-      success("GitHub issue page opened!");
-      console.log(colors.muted("Review and submit the issue."));
-    } catch {
-      warn("Could not open browser automatically.");
-      console.log(colors.muted("Please open this URL manually:\n"));
-      console.log(colors.cyan(issueUrl));
+      success("Submission created!");
+      if (result) {
+        console.log(colors.muted(`  ${result}`));
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      if (message.includes("not found") || message.includes("ENOENT")) {
+        error("GitHub CLI (gh) is not installed");
+        console.error(
+          colors.muted("Install it from https://cli.github.com then run `gh auth login`"),
+        );
+      } else if (message.includes("auth") || message.includes("401")) {
+        error("GitHub CLI is not authenticated");
+        console.error(colors.muted("Run `gh auth login` first"));
+      } else {
+        error("Failed to create issue");
+        console.error(colors.muted(message));
+      }
+
+      console.log();
+      warn("You can submit manually instead:");
+      const manualUrl = `https://github.com/rohitg00/skillkit/issues/new?title=${encodeURIComponent(`[Publish] ${skillEntry.name}`)}&labels=skill-submission,publish`;
+      console.log(colors.cyan(manualUrl));
+      return 1;
     }
 
     return 0;
@@ -601,13 +660,36 @@ export class PublishSubmitCommand extends Command {
       .join(" ");
   }
 
-  private createIssueBody(skill: {
-    id: string;
-    name: string;
-    description: string;
-    source: string;
-    tags: string[];
-  }): string {
+  private createIssueBody(
+    skill: {
+      id: string;
+      name: string;
+      description: string;
+      source: string;
+      tags: string[];
+    },
+    meta: {
+      qualityScore: number | null;
+      qualityGrade: string | null;
+      warnings: string[];
+      stars: number | null;
+      pushedAt: string | null;
+    },
+  ): string {
+    const qualityLine =
+      meta.qualityScore !== null
+        ? `- **Quality:** ${meta.qualityGrade} (${meta.qualityScore}/100)`
+        : "- **Quality:** N/A";
+    const starsLine =
+      typeof meta.stars === "number" ? `- **Stars:** ${formatCount(meta.stars)}` : "";
+    const pushLine = meta.pushedAt
+      ? `- **Last push:** ${meta.pushedAt.slice(0, 10)}`
+      : "";
+    const warningLines =
+      meta.warnings.length > 0
+        ? `\n### Warnings\n${meta.warnings.map((w) => `- ${w}`).join("\n")}`
+        : "";
+
     return `## Publish Skill Request
 
 ### Skill Details
@@ -616,6 +698,10 @@ export class PublishSubmitCommand extends Command {
 - **Description:** ${skill.description}
 - **Source:** [${skill.source}](https://github.com/${skill.source})
 - **Tags:** ${skill.tags.map((t) => `\`${t}\``).join(", ")}
+${qualityLine}
+${starsLine}
+${pushLine}
+${warningLines}
 
 ### JSON Entry
 \`\`\`json

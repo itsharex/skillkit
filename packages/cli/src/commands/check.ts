@@ -1,8 +1,8 @@
-import { existsSync } from 'node:fs';
+import { existsSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { Command, Option } from 'clipanion';
-import { findAllSkills, findSkill, detectProvider, isLocalPath } from '@skillkit/core';
-import { getSearchDirs, loadSkillMetadata } from '../helpers.js';
+import { findAllSkills, findSkill, detectProvider, isLocalPath, evaluateSkillDirectory } from '@skillkit/core';
+import { getSearchDirs, loadSkillMetadata, formatCount, timeAgo, fetchGitHubActivity } from '../helpers.js';
 import {
   colors,
   symbols,
@@ -11,6 +11,8 @@ import {
   success,
   warn,
   header,
+  formatQualityBadge,
+  getQualityGradeFromScore,
 } from '../onboarding/index.js';
 
 interface UpdateInfo {
@@ -18,15 +20,19 @@ interface UpdateInfo {
   currentVersion?: string;
   hasUpdate: boolean;
   error?: string;
+  qualityScore?: number | null;
+  stars?: number | null;
+  pushedAt?: string | null;
 }
 
 export class CheckCommand extends Command {
   static override paths = [['check']];
 
   static override usage = Command.Usage({
-    description: 'Check for available skill updates (dry-run)',
+    description: 'Check installed skills for updates, quality, and activity',
     details: `
       Checks if installed skills have updates available from their sources.
+      Shows quality scores and GitHub activity for each skill.
       Does not modify any files - just reports what would be updated.
     `,
     examples: [
@@ -89,12 +95,15 @@ export class CheckCommand extends Command {
 
     for (const skill of skillsToCheck) {
       const metadata = loadSkillMetadata(skill.path);
+      const quality = evaluateSkillDirectory(skill.path);
+      const qualityScore = quality?.overall ?? null;
 
       if (!metadata) {
         results.push({
           name: skill.name,
           hasUpdate: false,
           error: 'No metadata (reinstall needed)',
+          qualityScore,
         });
         continue;
       }
@@ -114,6 +123,7 @@ export class CheckCommand extends Command {
               name: skill.name,
               hasUpdate: false,
               error: 'Local source missing',
+              qualityScore,
             });
             if (this.verbose) s.stop(`${skill.name}: source missing`);
             continue;
@@ -123,20 +133,19 @@ export class CheckCommand extends Command {
           const installedSkillMd = join(skill.path, 'SKILL.md');
 
           if (existsSync(sourceSkillMd) && existsSync(installedSkillMd)) {
-            const { statSync } = await import('node:fs');
             const sourceTime = statSync(sourceSkillMd).mtime;
             const installedTime = statSync(installedSkillMd).mtime;
 
             if (sourceTime > installedTime) {
-              results.push({ name: skill.name, hasUpdate: true });
+              results.push({ name: skill.name, hasUpdate: true, qualityScore });
               updatesAvailable++;
               if (this.verbose) s.stop(`${skill.name}: update available`);
             } else {
-              results.push({ name: skill.name, hasUpdate: false });
+              results.push({ name: skill.name, hasUpdate: false, qualityScore });
               if (this.verbose) s.stop(`${skill.name}: up to date`);
             }
           } else {
-            results.push({ name: skill.name, hasUpdate: false });
+            results.push({ name: skill.name, hasUpdate: false, qualityScore });
             if (this.verbose) s.stop(`${skill.name}: up to date`);
           }
         } else {
@@ -147,15 +156,31 @@ export class CheckCommand extends Command {
               name: skill.name,
               hasUpdate: false,
               error: 'Unknown provider',
+              qualityScore,
             });
             if (this.verbose) s.stop(`${skill.name}: unknown provider`);
             continue;
+          }
+
+          const parsed = provider.parseSource(metadata.source);
+          let stars: number | null = null;
+          let pushedAt: string | null = null;
+
+          if (parsed && provider.name === 'GitHub') {
+            const activity = await fetchGitHubActivity(parsed.owner, parsed.repo);
+            if (activity) {
+              stars = activity.stars;
+              pushedAt = activity.pushedAt;
+            }
           }
 
           results.push({
             name: skill.name,
             hasUpdate: false,
             currentVersion: metadata.updatedAt || metadata.installedAt,
+            qualityScore,
+            stars,
+            pushedAt,
           });
           if (this.verbose) s.stop(`${skill.name}: remote source (run update to sync)`);
         }
@@ -164,6 +189,7 @@ export class CheckCommand extends Command {
           name: skill.name,
           hasUpdate: false,
           error: err instanceof Error ? err.message : 'Check failed',
+          qualityScore,
         });
         if (this.verbose) s.stop(`${skill.name}: error`);
       }
@@ -178,25 +204,44 @@ export class CheckCommand extends Command {
     if (withUpdates.length > 0) {
       console.log(colors.primary('Updates available:'));
       for (const r of withUpdates) {
-        console.log(`  ${colors.success(symbols.arrowUp)} ${colors.primary(r.name)}`);
+        const badge = this.qualityBadgeFor(r.qualityScore);
+        console.log(`  ${colors.success(symbols.arrowUp)} ${colors.primary(r.name)}${badge}`);
       }
       console.log('');
     }
 
-    if (upToDate.length > 0 && this.verbose) {
-      console.log(colors.muted('Up to date:'));
-      for (const r of upToDate) {
-        console.log(`  ${colors.muted(symbols.success)} ${colors.muted(r.name)}`);
+    if (upToDate.length > 0) {
+      if (this.verbose) {
+        console.log(colors.muted('Up to date:'));
       }
-      console.log('');
+      for (const r of upToDate) {
+        const badge = this.qualityBadgeFor(r.qualityScore);
+        const activityStr = this.formatActivity(r);
+        if (this.verbose) {
+          console.log(`  ${colors.muted(symbols.success)} ${colors.muted(r.name)}${badge}${activityStr}`);
+        }
+      }
+      if (this.verbose) console.log('');
     }
 
     if (withErrors.length > 0) {
       console.log(colors.warning('Could not check:'));
       for (const r of withErrors) {
-        console.log(`  ${colors.warning(symbols.warning)} ${r.name}: ${colors.muted(r.error || 'unknown')}`);
+        const badge = this.qualityBadgeFor(r.qualityScore);
+        console.log(`  ${colors.warning(symbols.warning)} ${r.name}${badge}: ${colors.muted(r.error || 'unknown')}`);
       }
       console.log('');
+    }
+
+    if (!this.quiet) {
+      const qualityScores = results
+        .map(r => r.qualityScore)
+        .filter((s): s is number => typeof s === 'number');
+      if (qualityScores.length > 0) {
+        const avg = Math.round(qualityScores.reduce((a, b) => a + b, 0) / qualityScores.length);
+        const grade = getQualityGradeFromScore(avg);
+        console.log(colors.muted(`Average quality: ${avg}/100 (${grade})`));
+      }
     }
 
     if (updatesAvailable > 0) {
@@ -208,4 +253,22 @@ export class CheckCommand extends Command {
 
     return 0;
   }
+
+  private qualityBadgeFor(score: number | null | undefined): string {
+    if (typeof score !== 'number') return '';
+    return ` ${formatQualityBadge(score)}`;
+  }
+
+  private formatActivity(r: UpdateInfo): string {
+    const parts: string[] = [];
+    if (typeof r.stars === 'number' && r.stars > 0) {
+      parts.push(`${formatCount(r.stars)} stars`);
+    }
+    if (r.pushedAt) {
+      parts.push(`pushed ${timeAgo(r.pushedAt)}`);
+    }
+    if (parts.length === 0) return '';
+    return ` ${colors.muted(`(${parts.join(', ')})`)}`;
+  }
+
 }
