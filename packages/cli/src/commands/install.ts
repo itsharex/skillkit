@@ -29,6 +29,7 @@ import {
   TrustScorer,
   readSkillContent,
   computeSkillChecksum,
+  addSkillToLock,
 } from "@skillkit/core";
 import type { SkillsShStats } from "@skillkit/core";
 import type { SkillMetadata, GitProvider, AgentType } from "@skillkit/core";
@@ -583,6 +584,15 @@ export class InstallCommand extends Command {
           };
           metadata.checksum = computeSkillChecksum(targetPath);
           saveSkillMetadata(targetPath, metadata);
+
+          addSkillToLock(skillName, {
+            source: this.source,
+            sourceType: providerAdapter!.type,
+            installedAt: new Date().toISOString(),
+            checksum: metadata.checksum,
+            agents: [agentType],
+            path: targetPath,
+          });
 
           installedAgents.push(agentType);
           s.stop(`Installed ${skillName} to ${adapter.name}${useSymlink ? " (symlink)" : ""}`);

@@ -2,7 +2,7 @@ import { existsSync, rmSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, dirname, basename } from 'node:path';
 import { colors, warn, success, error } from '../onboarding/index.js';
 import { Command, Option } from 'clipanion';
-import { findSkill, findAllSkills, loadMetadata, AgentsMdParser, AgentsMdGenerator } from '@skillkit/core';
+import { findSkill, findAllSkills, loadMetadata, AgentsMdParser, AgentsMdGenerator, removeSkillFromLock } from '@skillkit/core';
 import { getSearchDirs } from '../helpers.js';
 
 export class RemoveCommand extends Command {
@@ -88,6 +88,7 @@ export class RemoveCommand extends Command {
           const metaSibling = join(dirname(skillPath), `.${basename(skillPath, '.md')}.skillkit.json`);
           if (existsSync(metaSibling)) rmSync(metaSibling);
         }
+        removeSkillFromLock(skillName);
         success(`Removed: ${skillName}`);
         removed++;
       } catch (err) {
