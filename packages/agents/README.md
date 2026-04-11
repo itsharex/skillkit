@@ -3,7 +3,7 @@
 [![npm version](https://img.shields.io/npm/v/@skillkit/agents.svg)](https://www.npmjs.com/package/@skillkit/agents)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-**Agent adapters for SkillKit** - configuration and detection for 32 AI coding agents.
+**Agent adapters for SkillKit** - configuration and detection for 45 AI coding agents.
 
 ## Installation
 
@@ -11,7 +11,7 @@
 npm install @skillkit/agents
 ```
 
-## Supported Agents (32)
+## Supported Agents (45)
 
 | Agent | Config Format | Project Skills | Global Skills |
 |-------|--------------|----------------|---------------|
@@ -23,11 +23,14 @@ npm install @skillkit/agents
 | Antigravity | SKILL.md | `.antigravity/skills/` | - |
 | Amp | SKILL.md | `.amp/skills/` | - |
 | Clawdbot | SKILL.md | `.clawdbot/skills/` | - |
+| OpenClaw | SKILL.md | `skills/` | - |
 | Cline | SKILL.md | `.cline/skills/` | - |
 | CodeBuddy | SKILL.md | `.codebuddy/skills/` | - |
+| CodeGPT | SKILL.md | `.codegpt/skills/` | - |
 | CommandCode | SKILL.md | `.commandcode/skills/` | - |
 | Continue | SKILL.md | `.continue/skills/` | `~/.continue/skills/` |
 | Crush | SKILL.md | `.crush/skills/` | - |
+| Devin | SKILL.md | `.devin/skills/` | - |
 | Droid (Factory) | SKILL.md | `.factory/skills/` | - |
 | Factory | SKILL.md | `.factory/skills/` | - |
 | GitHub Copilot | Markdown | `.github/skills/` | - |
@@ -39,6 +42,7 @@ npm install @skillkit/agents
 | Neovate | SKILL.md | `.neovate/skills/` | - |
 | OpenHands | SKILL.md | `.openhands/skills/` | - |
 | Pi | SKILL.md | `.pi/skills/` | - |
+| PlayCode Agent | SKILL.md | `.playcode/skills/` | - |
 | Qoder | SKILL.md | `.qoder/skills/` | - |
 | Qwen | SKILL.md | `.qwen/skills/` | - |
 | Roo Code | SKILL.md | `.roo/skills/` | `~/.roo/skills/` |
@@ -46,6 +50,15 @@ npm install @skillkit/agents
 | Vercel | SKILL.md | `.vercel/skills/` | - |
 | Windsurf | Markdown | `.windsurf/skills/` | `~/.codeium/windsurf/skills/` |
 | Zencoder | SKILL.md | `.zencoder/skills/` | - |
+| Aider | SKILL.md | `.aider/skills/` | - |
+| Amazon Q | SKILL.md | `.amazonq/skills/` | - |
+| Augment Code | SKILL.md | `.augment/skills/` | - |
+| Bolt | SKILL.md | `.bolt/skills/` | - |
+| Lovable | SKILL.md | `.lovable/skills/` | - |
+| Replit Agent | SKILL.md | `.replit/skills/` | - |
+| Sourcegraph Cody | SKILL.md | `.cody/skills/` | - |
+| Tabby | SKILL.md | `.tabby/skills/` | - |
+| Tabnine | SKILL.md | `.tabnine/skills/` | - |
 | Universal | SKILL.md | `skills/` | - |
 
 ## Usage
