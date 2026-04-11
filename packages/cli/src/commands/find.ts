@@ -60,8 +60,9 @@ export class FindCommand extends Command {
     description: "Minimal output (just list skills)",
   });
 
-  federated = Option.Boolean("--federated,-f", false, {
-    description: "Search external registries (GitHub SKILL.md files)",
+  federated = Option.Boolean("--federated,-f", true, {
+    description: "Search external registries (enabled by default)",
+    hidden: true,
   });
 
   async execute(): Promise<number> {
@@ -162,9 +163,7 @@ export class FindCommand extends Command {
       s.start("Searching skills.sh + external registries...");
       const fedSearch = new FederatedSearch();
       fedSearch.addRegistry(new SkillsShRegistry());
-      if (this.federated) {
-        fedSearch.addRegistry(new GitHubSkillRegistry());
-      }
+      fedSearch.addRegistry(new GitHubSkillRegistry());
       try {
         const fedResult = await fedSearch.search(searchTerm, {
           limit: parseInt(this.limit, 10) || 10,

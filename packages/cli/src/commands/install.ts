@@ -132,14 +132,17 @@ export class InstallCommand extends Command {
     const isInteractive =
       process.stdin.isTTY && !this.skills && !this.all && !this.yes;
     const s = spinner();
+    let cloneResult: Awaited<ReturnType<typeof this.resolveSource>>["cloneResult"] = null;
 
     try {
       if (process.stdin.isTTY && !this.quiet) {
         welcome();
       }
 
-      const { providerAdapter, cloneResult } = await this.resolveSource(s);
-      if (!providerAdapter || !cloneResult) return 1;
+      const resolved = await this.resolveSource(s);
+      if (!resolved.providerAdapter || !resolved.cloneResult) return 1;
+      const providerAdapter = resolved.providerAdapter;
+      cloneResult = resolved.cloneResult;
 
       const discoveredSkills = cloneResult.discoveredSkills || [];
 
@@ -175,6 +178,7 @@ export class InstallCommand extends Command {
 
       return 0;
     } catch (err) {
+      if (cloneResult) this.cleanupTemp(cloneResult);
       s.stop(colors.error("Installation failed"));
       console.log(colors.muted(err instanceof Error ? err.message : String(err)));
       return 1;
