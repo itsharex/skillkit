@@ -70,11 +70,24 @@ skillkit install anthropics/skills --agent claude --agent cursor
 skillkit remove <skill-names> [options]
 ```
 
-| Option | Purpose |
-|--------|---------|
-| `--agent` | Target specific agents (default: all) |
-| `--yes` | Skip confirmation |
-| `--keep-metadata` | Remove skill but preserve metadata |
+| Option | Short | Purpose |
+|--------|-------|---------|
+| `--agent` | — | Target specific agents (default: all) |
+| `--yes` | — | Skip confirmation |
+| `--keep-metadata` | — | Remove skill but preserve metadata |
+| `--source` | `-s` | Remove all skills installed from a specific source |
+| `--all` | `-a` | Remove all installed skills |
+| `--force` | `-f` | Skip confirmation prompt |
+
+### Bulk Removal
+
+```bash
+skillkit remove --source iii-hq/iii
+skillkit remove --all
+skillkit remove --all --force
+```
+
+When using `--source`, SkillKit matches against the source field in each skill's metadata and removes every skill that was installed from that repository. When using `--all`, every discovered skill across all agent directories is removed. Both flags update AGENTS.md automatically if managed sections are present.
 
 ## Update Command
 
@@ -82,11 +95,19 @@ skillkit remove <skill-names> [options]
 skillkit update [skill-names] [options]
 ```
 
-| Option | Purpose |
-|--------|---------|
-| `--dry-run` | Check for updates without installing |
-| `--yes` | Skip confirmation prompts |
-| `--agent` | Update in specific agents only |
+| Option | Short | Purpose |
+|--------|-------|---------|
+| `--dry-run` | — | Check for updates without installing |
+| `--yes` | — | Skip confirmation prompts |
+| `--agent` | — | Update in specific agents only |
+| `--force` | `-f` | Force update, bypass checksum and GitHub API checks |
+
+The update command uses a two-stage change detection pipeline:
+
+1. **GitHub API check** -- For remote sources, SkillKit queries the GitHub API to compare the repository's `pushed_at` timestamp against the installed metadata. If the repository has not been pushed since the last install or update, the skill is skipped without cloning.
+2. **Checksum comparison** -- After cloning, a checksum of the source SKILL.md is compared against the stored checksum. If the content is identical, the update is skipped.
+
+Use `--force` to bypass both checks and always overwrite the installed skill.
 
 ## Enable/Disable Commands
 
@@ -96,6 +117,26 @@ skillkit disable <skill-names> [options]
 ```
 
 Disabled skills are ignored by the `sync` command. No file changes occur.
+
+## Check Command
+
+```bash
+skillkit check [skill-names] [options]
+```
+
+Checks installed skills for available updates, quality scores, and GitHub activity.
+
+| Option | Short | Purpose |
+|--------|-------|---------|
+| `--verbose` | `-v` | Show detailed output including stars and push dates |
+| `--quiet` | `-q` | Minimal output |
+
+For remote GitHub sources, the check command queries the GitHub API to compare each repository's `pushed_at` timestamp against the installed date. Each skill displays its quality score badge (A-F). In verbose mode, the output also includes the repository's star count and how recently it was pushed.
+
+```bash
+skillkit check
+skillkit check pdf xlsx --verbose
+```
 
 ## List Command
 
@@ -456,6 +497,48 @@ skillkit publish --output dir  # Output to specific directory
 skillkit publish --dry-run     # Preview without writing
 skillkit publish submit        # Submit to SkillKit marketplace
 ```
+
+### publish submit
+
+Submits a skill to the SkillKit marketplace by creating a GitHub issue on `rohitg00/skillkit` via the `gh` CLI. No browser is needed.
+
+Before submitting, the command displays:
+- Quality score and grade (A-F) from the skill evaluator
+- GitHub star count and last push date from the GitHub API
+- Any quality warnings (up to 3)
+
+If `gh` is not installed or not authenticated, the command prints a manual submission URL as a fallback.
+
+## Tap Command
+
+Manage custom skill sources (taps). Taps are user-level source repositories stored in `~/.skillkit/taps.json`. They let you add private or third-party skill repositories that are not part of the official marketplace.
+
+### tap add
+
+Add a custom skill source.
+
+```bash
+skillkit tap add owner/repo
+skillkit tap add owner/repo --name "My Skills"
+```
+
+### tap remove
+
+Remove a custom skill source.
+
+```bash
+skillkit tap remove owner/repo
+```
+
+### tap list
+
+List all custom skill sources.
+
+```bash
+skillkit tap list
+```
+
+Once a tap is added, skills from that source appear in `skillkit marketplace search` results and can be installed with the standard `skillkit install owner/repo` workflow.
 
 ## Security Scanning
 

@@ -94,6 +94,23 @@ export const SkillMetadata = z.object({
 });
 export type SkillMetadata = z.infer<typeof SkillMetadata>;
 
+export const LockEntry = z.object({
+  source: z.string(),
+  sourceType: GitProvider,
+  installedAt: z.string().datetime(),
+  updatedAt: z.string().datetime().optional(),
+  checksum: z.string().optional(),
+  agents: z.array(z.string()),
+  path: z.string(),
+});
+export type LockEntry = z.infer<typeof LockEntry>;
+
+export const LockFile = z.object({
+  version: z.literal(1),
+  skills: z.record(z.string(), LockEntry),
+});
+export type LockFile = z.infer<typeof LockFile>;
+
 export const SkillLocation = z.enum(["project", "global"]);
 export type SkillLocation = z.infer<typeof SkillLocation>;
 

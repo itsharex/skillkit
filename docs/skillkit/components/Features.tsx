@@ -18,7 +18,7 @@ const FEATURES: Feature[] = [
   },
   {
     title: 'Auto Translation',
-    description: 'The npm for agent skills. Write once, auto-translate to 44 formats.',
+    description: 'The npm for agent skills. Write once, auto-translate to 45 formats.',
     icon: (
       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
@@ -36,7 +36,7 @@ const FEATURES: Feature[] = [
   },
   {
     title: 'Primer',
-    description: 'Auto-generate agent instructions for all 44 agents from your codebase.',
+    description: 'Auto-generate agent instructions for all 45 agents from your codebase.',
     icon: (
       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -109,9 +109,9 @@ const FEATURES: Feature[] = [
 ];
 
 const COMPARISONS = [
-  ['Agent Support', '1-17 agents', '44 agents'],
+  ['Agent Support', '1-17 agents', '45 agents'],
   ['Sources', 'Single registry', '34+ aggregated'],
-  ['Translation', 'None or limited', 'All 44 formats'],
+  ['Translation', 'None or limited', 'All 45 formats'],
   ['Memory', 'None', 'Persistent learning'],
   ['Security', 'None', '46-rule scanner'],
   ['Team Sync', 'None', '.skills manifest'],
@@ -131,7 +131,7 @@ export function Features(): React.ReactElement {
             </p>
             <div className="flex gap-6 sm:gap-8">
               <div>
-                <div className="text-2xl sm:text-3xl font-bold text-white font-mono">44</div>
+                <div className="text-2xl sm:text-3xl font-bold text-white font-mono">45</div>
                 <div className="text-zinc-600 text-[10px] sm:text-xs font-mono">Agents</div>
               </div>
               <div>

@@ -26,6 +26,10 @@ import {
   AgentsMdParser,
   AgentsMdGenerator,
   SkillsShRegistry,
+  TrustScorer,
+  readSkillContent,
+  computeSkillChecksum,
+  addSkillToLock,
 } from "@skillkit/core";
 import type { SkillsShStats } from "@skillkit/core";
 import type { SkillMetadata, GitProvider, AgentType } from "@skillkit/core";
@@ -56,6 +60,7 @@ import {
   getLastAgents,
   formatQualityBadge,
   getQualityGradeFromScore,
+  formatTrustBadge,
   type InstallResult,
 } from "../onboarding/index.js";
 
@@ -132,14 +137,17 @@ export class InstallCommand extends Command {
     const isInteractive =
       process.stdin.isTTY && !this.skills && !this.all && !this.yes;
     const s = spinner();
+    let cloneResult: Awaited<ReturnType<typeof this.resolveSource>>["cloneResult"] = null;
 
     try {
       if (process.stdin.isTTY && !this.quiet) {
         welcome();
       }
 
-      const { providerAdapter, cloneResult } = await this.resolveSource(s);
-      if (!providerAdapter || !cloneResult) return 1;
+      const resolved = await this.resolveSource(s);
+      if (!resolved.providerAdapter || !resolved.cloneResult) return 1;
+      const providerAdapter = resolved.providerAdapter;
+      cloneResult = resolved.cloneResult;
 
       const discoveredSkills = cloneResult.discoveredSkills || [];
 
@@ -169,7 +177,6 @@ export class InstallCommand extends Command {
         skillsToInstall, targetAgents, installMethod, providerAdapter, cloneResult, s,
       );
 
-      this.cleanupTemp(cloneResult);
       this.updateAgentsMd(installResults.length);
       await this.showResults(installResults, targetAgents, providerAdapter, isInteractive);
 
@@ -178,6 +185,8 @@ export class InstallCommand extends Command {
       s.stop(colors.error("Installation failed"));
       console.log(colors.muted(err instanceof Error ? err.message : String(err)));
       return 1;
+    } finally {
+      if (cloneResult) this.cleanupTemp(cloneResult);
     }
   }
 
@@ -431,6 +440,36 @@ export class InstallCommand extends Command {
       console.log("");
     }
 
+    const officialSources = [
+      "anthropics/skills",
+      "vercel-labs/agent-skills",
+      "expo/skills",
+      "remotion-dev/skills",
+      "supabase/agent-skills",
+      "stripe/ai",
+    ];
+    const sourceProvider = detectProvider(this.source);
+    const parsedSource = sourceProvider?.parseSource(this.source);
+    const normalizedSource = parsedSource ? `${parsedSource.owner}/${parsedSource.repo}` : this.source;
+    const isOfficial = sourceProvider?.type === "github" && officialSources.includes(normalizedSource);
+
+    const scorer = new TrustScorer();
+    for (const skill of skillsToInstall) {
+      const content = readSkillContent(skill.path);
+      if (content) {
+        const result = scorer.score(content);
+        const badge = formatTrustBadge({
+          isOfficial,
+          officialSource: isOfficial ? this.source : undefined,
+          grade: result.grade,
+          score: result.score,
+          source: this.source,
+        });
+        console.log(`  ${colors.primary(skill.name)}: ${badge}`);
+      }
+    }
+    console.log("");
+
     const agentDisplay =
       targetAgents.length <= 3
         ? targetAgents.map(formatAgent).join(", ")
@@ -546,6 +585,7 @@ export class InstallCommand extends Command {
             installedAt: new Date().toISOString(),
             enabled: true,
           };
+          metadata.checksum = computeSkillChecksum(targetPath);
           saveSkillMetadata(targetPath, metadata);
 
           installedAgents.push(agentType);
@@ -557,11 +597,24 @@ export class InstallCommand extends Command {
       }
 
       if (installedAgents.length > 0) {
+        const firstAgentInstallDir = getInstallDir(this.global, installedAgents[0] as AgentType);
+        const isStandalone = existsSync(join(firstAgentInstallDir, skillName.endsWith(".md") ? skillName : `${skillName}.md`));
+        const actualPath = isStandalone
+          ? join(firstAgentInstallDir, skillName.endsWith(".md") ? skillName : `${skillName}.md`)
+          : join(firstAgentInstallDir, skillName);
+        addSkillToLock(skillName, {
+          source: this.source,
+          sourceType: providerAdapter!.type,
+          installedAt: new Date().toISOString(),
+          checksum: computeSkillChecksum(actualPath),
+          agents: installedAgents,
+          path: actualPath,
+        });
         installResults.push({
           skillName,
           method: installMethod,
           agents: installedAgents,
-          path: join(getInstallDir(this.global, installedAgents[0] as AgentType), skillName),
+          path: actualPath,
         });
       }
     }

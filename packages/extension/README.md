@@ -23,7 +23,7 @@ Then in Chrome:
 
 Skills download to `Downloads/skillkit-skills/{name}/SKILL.md`.
 
-To make available to all 44 agents:
+To make available to all 45 agents:
 
 ```bash
 skillkit install ~/Downloads/skillkit-skills/my-skill

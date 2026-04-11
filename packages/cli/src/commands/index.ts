@@ -132,6 +132,7 @@ export { TimelineCommand } from './timeline.js';
 export { SessionHandoffCommand } from './handoff.js';
 export { LineageCommand } from './lineage.js';
 export { SaveCommand } from './save.js';
+export { TapAddCommand, TapRemoveCommand, TapListCommand } from './tap.js';
 export {
   AgentsMdCommand,
   AgentsMdInitCommand,

@@ -124,6 +124,9 @@ import {
   TimelineCommand,
   SessionHandoffCommand,
   LineageCommand,
+  TapAddCommand,
+  TapRemoveCommand,
+  TapListCommand,
 } from '@skillkit/cli';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -276,5 +279,9 @@ cli.register(IssueListCommand);
 cli.register(TimelineCommand);
 cli.register(SessionHandoffCommand);
 cli.register(LineageCommand);
+
+cli.register(TapAddCommand);
+cli.register(TapRemoveCommand);
+cli.register(TapListCommand);
 
 cli.runExit(process.argv.slice(2));

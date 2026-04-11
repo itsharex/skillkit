@@ -152,11 +152,61 @@ primer:
     - .next
 ```
 
+## Lock File
+
+SkillKit maintains a centralized lock file at `~/.skillkit/lock.json` that tracks every installed skill. The lock file is written on install, updated on update, and cleaned on remove.
+
+```json
+{
+  "version": 1,
+  "skills": {
+    "pdf": {
+      "source": "anthropics/skills",
+      "checksum": "sha256:abc123...",
+      "agents": ["claude-code", "cursor"],
+      "installedAt": "2026-04-01T12:00:00Z",
+      "updatedAt": "2026-04-08T09:30:00Z"
+    }
+  }
+}
+```
+
+| Field | Description |
+|-------|-------------|
+| `source` | The repository or local path the skill was installed from |
+| `checksum` | SHA-256 hash of the SKILL.md content at install time, used for update detection |
+| `agents` | Which agents the skill is installed for |
+| `installedAt` | ISO timestamp of initial installation |
+| `updatedAt` | ISO timestamp of the most recent update |
+
+The `update` command compares the stored checksum against the source to skip unchanged skills. The `remove` command cleans up the corresponding lock entry.
+
+## Taps File
+
+Custom skill source repositories are stored in `~/.skillkit/taps.json`. Taps are managed via the `skillkit tap` commands.
+
+```json
+{
+  "version": 1,
+  "taps": [
+    {
+      "source": "myorg/internal-skills",
+      "name": "Internal Skills",
+      "addedAt": "2026-04-05T10:00:00Z"
+    }
+  ]
+}
+```
+
+Skills from tapped sources appear in marketplace search results and can be installed like any other source. See the [tap command](/docs/commands#tap-command) documentation for usage.
+
 ## Directory Structure
 
 ```
 ~/.skillkit/
 ├── preferences.json   # User preferences
+├── lock.json         # Installed skill tracking
+├── taps.json         # Custom skill sources
 ├── cache/            # Marketplace cache
 ├── memory/           # Learning storage
 │   ├── observations/

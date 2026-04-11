@@ -96,10 +96,10 @@ describe('Onboarding Module', () => {
     it('should generate full logo with version', async () => {
       const { getFullLogo } = await import('../onboarding/logo.js');
 
-      const logo = getFullLogo('1.7.2', 44);
+      const logo = getFullLogo('1.7.2', 45);
       expect(logo).toContain('\u2588');
       expect(logo).toContain('v1.7.2');
-      expect(logo).toContain('44 agents');
+      expect(logo).toContain('45 agents');
     });
 
     it('should generate compact logo', async () => {

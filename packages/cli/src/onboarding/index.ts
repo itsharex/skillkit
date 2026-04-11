@@ -12,6 +12,7 @@ export {
   formatQualityBadge,
   formatQualityBadgeCompact,
   getQualityGradeFromScore,
+  formatTrustBadge,
 } from './theme.js';
 
 export {

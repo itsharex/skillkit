@@ -13,7 +13,7 @@ const USE_CASES: UseCase[] = [
   {
     persona: 'Multi-Agent Developer',
     problem: 'You\'ve built skills for Claude Code. Now your team wants Cursor, and you want to try Windsurf.',
-    solution: 'SkillKit translates skills between all 44 agents. Write once, deploy everywhere.',
+    solution: 'SkillKit translates skills between all 45 agents. Write once, deploy everywhere.',
     command: 'skillkit translate --to cursor,windsurf',
     gradient: 'from-violet-500/10 to-purple-500/10',
     icon: (

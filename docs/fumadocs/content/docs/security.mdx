@@ -242,6 +242,28 @@ console.log(`Findings: ${result.findings.length}`);
 | **Low** | 1 (with `--fail-on low`) | Minor issue or best practice |
 | **Info** | 0 | Informational finding |
 
+## Trust Badges
+
+Skills display a trust badge based on their source and quality analysis. Badges appear during installation, in `skillkit check` output, and in marketplace search results.
+
+| Badge | Criteria |
+|-------|----------|
+| **[Official]** | Published by a known official source (Anthropic, Vercel, iii-hq, etc.) |
+| **[Trusted]** | TrustScorer rates the skill 8-10 based on clarity, boundaries, specificity, and safety |
+| **[Review]** | TrustScorer rates the skill 5-7; the skill may need refinement |
+| **[Caution]** | TrustScorer rates the skill 0-4; requires careful review before use |
+
+The `TrustScorer` evaluates four weighted dimensions:
+
+| Dimension | Weight | What it measures |
+|-----------|--------|------------------|
+| Clarity | 30% | How well-defined the skill's purpose and instructions are |
+| Boundaries | 25% | Whether the skill stays within its declared scope |
+| Specificity | 25% | How concrete and actionable the instructions are |
+| Safety | 20% | Absence of dangerous patterns (injection, exfiltration, secrets) |
+
+Official sources are allowlisted by organization name and always receive the `[Official]` badge regardless of score. For all other sources, the badge is determined by the composite trust score.
+
 ## False Positive Handling
 
 The scanner automatically filters:

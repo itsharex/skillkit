@@ -1,8 +1,9 @@
-import { existsSync, readFileSync, writeFileSync, mkdirSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, statSync, renameSync } from 'node:fs';
 import { join, dirname, basename } from 'node:path';
 import { homedir } from 'node:os';
+import { createHash } from 'node:crypto';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
-import { SkillkitConfig, type AgentType, type SkillMetadata, type AgentAdapterInfo } from './types.js';
+import { SkillkitConfig, LockFile, type AgentType, type SkillMetadata, type AgentAdapterInfo, type LockEntry } from './types.js';
 
 const CONFIG_FILE = 'skillkit.yaml';
 const METADATA_FILE = '.skillkit.json';
@@ -148,6 +149,58 @@ export function setSkillEnabled(skillPath: string, enabled: boolean): boolean {
   saveSkillMetadata(skillPath, metadata);
 
   return true;
+}
+
+export function computeSkillChecksum(skillPath: string): string {
+  const mdPath = skillPath.endsWith('.md') ? skillPath : join(skillPath, 'SKILL.md');
+  if (!existsSync(mdPath)) return '';
+  return createHash('sha256').update(readFileSync(mdPath)).digest('hex').slice(0, 16);
+}
+
+const LOCK_FILE = join(homedir(), '.skillkit', 'lock.json');
+
+export function loadLockFile(): LockFile {
+  if (!existsSync(LOCK_FILE)) return { version: 1, skills: {} };
+  try {
+    return LockFile.parse(JSON.parse(readFileSync(LOCK_FILE, 'utf-8')));
+  } catch {
+    return { version: 1, skills: {} };
+  }
+}
+
+export function saveLockFile(lock: LockFile): void {
+  const dir = dirname(LOCK_FILE);
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+  const tmpFile = `${LOCK_FILE}.${process.pid}.tmp`;
+  writeFileSync(tmpFile, JSON.stringify(lock, null, 2), 'utf-8');
+  renameSync(tmpFile, LOCK_FILE);
+}
+
+export function addSkillToLock(name: string, entry: LockEntry): void {
+  const lock = loadLockFile();
+  const key = `${entry.source}:${name}`;
+  const existing = lock.skills[key];
+  if (existing) {
+    const mergedAgents = [...new Set([...existing.agents, ...entry.agents])];
+    lock.skills[key] = { ...entry, agents: mergedAgents };
+  } else {
+    lock.skills[key] = entry;
+  }
+  saveLockFile(lock);
+}
+
+export function removeSkillFromLock(name: string, source?: string): void {
+  const lock = loadLockFile();
+  if (source) {
+    delete lock.skills[`${source}:${name}`];
+  } else {
+    for (const key of Object.keys(lock.skills)) {
+      if (key === name || key.endsWith(`:${name}`)) {
+        delete lock.skills[key];
+      }
+    }
+  }
+  saveLockFile(lock);
 }
 
 export async function initProject(

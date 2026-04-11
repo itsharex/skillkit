@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "SkillKit - Save as Skill",
   "version": "1.20.0",
-  "description": "Save any webpage as an AI agent skill — instantly available across 44 agents",
+  "description": "Save any webpage as an AI agent skill — instantly available across 45 agents",
   "permissions": ["contextMenus", "activeTab", "downloads", "scripting"],
   "background": {
     "service_worker": "background.global.js"

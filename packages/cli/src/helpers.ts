@@ -1,3 +1,6 @@
+import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { homedir } from 'node:os';
 import {
   loadConfig,
   getSearchDirs as coreGetSearchDirs,
@@ -59,6 +62,38 @@ export function timeAgo(dateStr: string): string {
   if (days < 30) return `${days}d ago`;
   if (days < 365) return `${Math.floor(days / 30)}mo ago`;
   return `${Math.floor(days / 365)}y ago`;
+}
+
+export interface TapEntry {
+  source: string;
+  name?: string;
+  addedAt: string;
+}
+
+export interface TapsFile {
+  version: 1;
+  taps: TapEntry[];
+}
+
+const TAPS_FILE = join(homedir(), '.skillkit', 'taps.json');
+
+export function loadTaps(): TapsFile {
+  if (!existsSync(TAPS_FILE)) return { version: 1, taps: [] };
+  try {
+    const data = JSON.parse(readFileSync(TAPS_FILE, 'utf-8'));
+    if (data && data.version === 1 && Array.isArray(data.taps)) {
+      return data as TapsFile;
+    }
+    return { version: 1, taps: [] };
+  } catch {
+    return { version: 1, taps: [] };
+  }
+}
+
+export function saveTaps(taps: TapsFile): void {
+  const dir = dirname(TAPS_FILE);
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+  writeFileSync(TAPS_FILE, JSON.stringify(taps, null, 2), 'utf-8');
 }
 
 export async function fetchGitHubActivity(

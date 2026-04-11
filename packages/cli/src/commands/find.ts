@@ -13,7 +13,7 @@ import {
   GitHubSkillRegistry,
   SkillsShRegistry,
 } from "@skillkit/core";
-import { formatCount } from "../helpers.js";
+import { formatCount, loadTaps } from "../helpers.js";
 
 interface SkillResult {
   name: string;
@@ -60,8 +60,9 @@ export class FindCommand extends Command {
     description: "Minimal output (just list skills)",
   });
 
-  federated = Option.Boolean("--federated,-f", false, {
-    description: "Search external registries (GitHub SKILL.md files)",
+  federated = Option.Boolean("--federated,-f", true, {
+    description: "Search external registries (enabled by default)",
+    hidden: true,
   });
 
   async execute(): Promise<number> {
@@ -85,6 +86,20 @@ export class FindCommand extends Command {
         repoName: skill.repo || skill.source?.split("/").pop() || "",
       }),
     );
+
+    const taps = loadTaps();
+    for (const tap of taps.taps) {
+      const tapLabel = tap.name || tap.source;
+      const exists = allSkills.some((s) => s.source === tap.source);
+      if (!exists) {
+        allSkills.push({
+          name: tapLabel,
+          description: `Custom tap: ${tap.source}`,
+          source: tap.source,
+          repoName: tap.source.split("/").pop() || "",
+        });
+      }
+    }
 
     let results: SkillResult[];
     let searchTerm: string | undefined;
@@ -246,7 +261,7 @@ export class FindCommand extends Command {
       );
       console.log(
         colors.muted(
-          "  skillkit find -f <query>  # Also search GitHub SKILL.md files",
+          "  skillkit find <query>  # Search marketplace + GitHub",
         ),
       );
       console.log(colors.muted("  skillkit ui               # Browse in TUI"));

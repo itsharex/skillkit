@@ -233,11 +233,14 @@ skillkit install <source>        # Install skills (with live progress)
 skillkit remove <skills>         # Remove skills
 skillkit remove --source org/repo # Remove all skills from a source
 skillkit remove --all            # Remove all installed skills
+skillkit update                  # Update skills (with change detection)
+skillkit check                   # Check for updates, quality, and activity
 skillkit translate <skill> --to  # Translate between agents
 skillkit sync                    # Deploy to agent config
 skillkit recommend               # Smart recommendations
 skillkit generate                # AI skill generation wizard
 skillkit serve                   # Start REST API server
+skillkit publish submit          # Publish to marketplace via CLI
 ```
 
 ### Discovery & Security
@@ -247,6 +250,14 @@ skillkit marketplace             # Browse skills
 skillkit tree                    # Hierarchical taxonomy
 skillkit find <query>            # Quick search
 skillkit scan <path>             # Security scan for skills
+```
+
+### Custom Sources
+
+```bash
+skillkit tap add owner/repo      # Add custom skill source
+skillkit tap list                # List custom sources
+skillkit tap remove owner/repo   # Remove custom source
 ```
 
 ### Issue Planner
