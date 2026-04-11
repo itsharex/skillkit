@@ -1,0 +1,304 @@
+name: Auto-Publish Skill Submission
+
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  issues: write
+  contents: write
+
+concurrency:
+  group: auto-publish-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  auto-publish:
+    if: github.event.label.name == 'skill-submission'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      - name: Extract and validate submission
+        id: validate
+        uses: actions/github-script@v7
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        with:
+          script: |
+            const { execSync } = require('child_process');
+            const fs = require('fs');
+            const path = require('path');
+
+            const body = process.env.ISSUE_BODY || '';
+
+            const jsonMatch = body.match(/```json\s*\n([\s\S]*?)\n```/);
+            if (!jsonMatch) {
+              core.setOutput('status', 'error');
+              core.setOutput('message', 'No JSON block found in issue body. Please include your source entry between \\`\\`\\`json and \\`\\`\\` fences.');
+              return;
+            }
+
+            let entry;
+            try {
+              entry = JSON.parse(jsonMatch[1].trim());
+            } catch (e) {
+              core.setOutput('status', 'error');
+              core.setOutput('message', `Invalid JSON in submission: ${e.message}`);
+              return;
+            }
+
+            const source = entry.source || entry.owner && entry.repo ? `${entry.owner}/${entry.repo}` : null;
+            const name = entry.name;
+            const description = entry.description || '';
+
+            if (!source || !name) {
+              core.setOutput('status', 'error');
+              core.setOutput('message', 'Missing required fields. JSON must include `source` (owner/repo) and `name`.');
+              return;
+            }
+
+            const parts = source.split('/');
+            if (parts.length !== 2 || !parts[0] || !parts[1]) {
+              core.setOutput('status', 'error');
+              core.setOutput('message', `Invalid source format "${source}". Must be "owner/repo".`);
+              return;
+            }
+
+            const [owner, repo] = parts;
+
+            const sourcesData = JSON.parse(fs.readFileSync('marketplace/sources.json', 'utf-8'));
+            const existing = sourcesData.sources.find(s => s.source === source);
+            if (existing) {
+              core.setOutput('status', 'error');
+              core.setOutput('message', `Source "${source}" already exists in sources.json as "${existing.name}".`);
+              return;
+            }
+
+            try {
+              const repoCheck = await github.rest.repos.get({ owner, repo });
+              if (repoCheck.status !== 200) throw new Error('not found');
+            } catch (e) {
+              core.setOutput('status', 'error');
+              core.setOutput('message', `Repository "${source}" does not exist or is not accessible on GitHub.`);
+              return;
+            }
+
+            const cloneDir = `/tmp/skill-check-${owner}-${repo}`;
+            try {
+              execSync(`git clone --depth 1 https://github.com/${owner}/${repo}.git ${cloneDir}`, {
+                timeout: 60000,
+                stdio: 'pipe',
+              });
+            } catch (e) {
+              core.setOutput('status', 'error');
+              core.setOutput('message', `Failed to clone repository "${source}".`);
+              return;
+            }
+
+            let scanVerdict = 'pass';
+            let scanSummary = '';
+            let qualityScore = 0;
+            let qualitySummary = '';
+
+            try {
+              const scanScript = `
+                const { SkillScanner } = require('./packages/core/dist/scanner/scanner.js');
+                const scanner = new SkillScanner();
+                scanner.scan('${cloneDir}').then(result => {
+                  console.log(JSON.stringify({
+                    verdict: result.verdict,
+                    stats: result.stats,
+                    findings: result.findings.length,
+                  }));
+                });
+              `;
+
+              const scanOutput = execSync(`node -e "${scanScript.replace(/\n/g, ' ')}"`, {
+                cwd: process.cwd(),
+                timeout: 30000,
+                stdio: 'pipe',
+              }).toString().trim();
+
+              const scanResult = JSON.parse(scanOutput);
+              scanVerdict = scanResult.verdict;
+              scanSummary = `Verdict: ${scanResult.verdict}, Findings: ${scanResult.findings}, Critical: ${scanResult.stats.critical}, High: ${scanResult.stats.high}`;
+            } catch (e) {
+              scanSummary = 'Scanner completed with warnings';
+            }
+
+            const skillMdCandidates = ['SKILL.md', 'skill.md', 'README.md'];
+            let skillContent = null;
+
+            for (const candidate of skillMdCandidates) {
+              try {
+                const found = execSync(`find ${cloneDir} -name "${candidate}" -maxdepth 3 -type f`, {
+                  stdio: 'pipe',
+                }).toString().trim().split('\n').filter(Boolean);
+
+                if (found.length > 0) {
+                  skillContent = fs.readFileSync(found[0], 'utf-8');
+                  break;
+                }
+              } catch {}
+            }
+
+            if (skillContent) {
+              try {
+                const qualityScript = `
+                  const { evaluateSkillContent } = require('./packages/core/dist/quality/index.js');
+                  const fs = require('fs');
+                  const content = fs.readFileSync('${cloneDir}/.skill-content.tmp', 'utf-8');
+                  const result = evaluateSkillContent(content);
+                  console.log(JSON.stringify({ overall: result.overall, warnings: result.warnings }));
+                `;
+
+                fs.writeFileSync(`${cloneDir}/.skill-content.tmp`, skillContent);
+
+                const qualityOutput = execSync(`node -e "${qualityScript.replace(/\n/g, ' ')}"`, {
+                  cwd: process.cwd(),
+                  timeout: 30000,
+                  stdio: 'pipe',
+                }).toString().trim();
+
+                const qualityResult = JSON.parse(qualityOutput);
+                qualityScore = qualityResult.overall;
+                qualitySummary = `Score: ${qualityResult.overall}/100, Warnings: ${qualityResult.warnings.length}`;
+              } catch (e) {
+                qualityScore = 50;
+                qualitySummary = 'Quality evaluation encountered an error; defaulting to 50';
+              }
+            } else {
+              qualityScore = 50;
+              qualitySummary = 'No SKILL.md or README.md found; defaulting to score 50';
+            }
+
+            const scanPassed = scanVerdict !== 'fail';
+            const qualityPassed = qualityScore >= 75;
+
+            core.setOutput('source', source);
+            core.setOutput('name', name);
+            core.setOutput('description', description);
+            core.setOutput('official', entry.official === true ? 'true' : 'false');
+            core.setOutput('scan_verdict', scanVerdict);
+            core.setOutput('scan_summary', scanSummary);
+            core.setOutput('quality_score', String(qualityScore));
+            core.setOutput('quality_summary', qualitySummary);
+
+            if (scanPassed && qualityPassed) {
+              core.setOutput('status', 'pass');
+              core.setOutput('message', `Validation passed. Security: ${scanSummary}. Quality: ${qualitySummary}.`);
+            } else {
+              const reasons = [];
+              if (!scanPassed) reasons.push(`Security scan failed: ${scanSummary}`);
+              if (!qualityPassed) reasons.push(`Quality score ${qualityScore}/100 is below threshold of 75`);
+              core.setOutput('status', 'reject');
+              core.setOutput('message', reasons.join('. '));
+            }
+
+      - name: Add source and commit
+        if: steps.validate.outputs.status == 'pass'
+        run: |
+          node -e "
+            const fs = require('fs');
+            const data = JSON.parse(fs.readFileSync('marketplace/sources.json', 'utf-8'));
+
+            const newEntry = { source: '${{ steps.validate.outputs.source }}', name: '${{ steps.validate.outputs.name }}' };
+
+            if ('${{ steps.validate.outputs.description }}') {
+              newEntry.description = '${{ steps.validate.outputs.description }}';
+            }
+
+            const skillsSh = data.sources.pop();
+            data.sources.push(newEntry);
+            if (skillsSh && skillsSh.registry === 'skills-sh') {
+              data.sources.push(skillsSh);
+            }
+
+            data.updatedAt = new Date().toISOString().split('T')[0];
+            fs.writeFileSync('marketplace/sources.json', JSON.stringify(data, null, 2) + '\n');
+          "
+
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add marketplace/sources.json
+          git commit -m "feat(marketplace): add source ${{ steps.validate.outputs.source }} from #${{ github.event.issue.number }}"
+          git push
+
+      - name: Close issue on success
+        if: steps.validate.outputs.status == 'pass'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue comment ${{ github.event.issue.number }} --body "$(cat <<'EOF'
+          **Skill source auto-published!**
+
+          **Source:** `${{ steps.validate.outputs.source }}`
+          **Name:** ${{ steps.validate.outputs.name }}
+          **Security:** ${{ steps.validate.outputs.scan_summary }}
+          **Quality:** ${{ steps.validate.outputs.quality_summary }}
+
+          The source has been added to `marketplace/sources.json` and will be included in the next release.
+          EOF
+          )"
+          gh issue close ${{ github.event.issue.number }}
+
+      - name: Comment rejection reason
+        if: steps.validate.outputs.status == 'reject'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue comment ${{ github.event.issue.number }} --body "$(cat <<'EOF'
+          **Skill submission did not pass automated checks.**
+
+          ${{ steps.validate.outputs.message }}
+
+          **Details:**
+          - Security scan: ${{ steps.validate.outputs.scan_verdict }} (${{ steps.validate.outputs.scan_summary }})
+          - Quality score: ${{ steps.validate.outputs.quality_score }}/100 (${{ steps.validate.outputs.quality_summary }})
+
+          Please address these issues and update your submission. A maintainer will review manually.
+          EOF
+          )"
+          gh issue edit ${{ github.event.issue.number }} --add-label "needs-review"
+
+      - name: Comment parse error
+        if: steps.validate.outputs.status == 'error'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue comment ${{ github.event.issue.number }} --body "$(cat <<'EOF'
+          **Could not process skill submission.**
+
+          ${{ steps.validate.outputs.message }}
+
+          **Expected format in issue body:**
+          \`\`\`json
+          {
+            "source": "owner/repo",
+            "name": "Display Name",
+            "description": "Optional description"
+          }
+          \`\`\`
+
+          Please update the issue body and re-apply the `skill-submission` label.
+          EOF
+          )"
+          gh issue edit ${{ github.event.issue.number }} --add-label "needs-review"

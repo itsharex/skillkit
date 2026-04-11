@@ -1,7 +1,7 @@
 {
   "$schema": "./sources-schema.json",
   "version": 1,
-  "updatedAt": "2026-02-28",
+  "updatedAt": "2026-04-10",
   "description": "Curated skill repository sources - THE SINGLE SOURCE OF TRUTH",
   "sources": [
     { "source": "anthropics/skills", "name": "Anthropic Official", "official": true },
@@ -37,6 +37,7 @@
     { "source": "intellectronica/agent-skills", "name": "Context7" },
     { "source": "muratcankoylan/Agent-Skills-for-Context-Engineering", "name": "Context Engineering" },
     { "source": "sickn33/antigravity-awesome-skills", "name": "Antigravity Awesome Skills" },
+    { "source": "NousResearch/hermes-agent", "name": "Hermes Agent Skills" },
     { "source": "skills.sh", "name": "Skills.sh Leaderboard", "official": true, "registry": "skills-sh" }
   ]
 }
