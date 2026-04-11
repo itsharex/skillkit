@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, writeFileSync, mkdirSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, statSync, renameSync } from 'node:fs';
 import { join, dirname, basename } from 'node:path';
 import { homedir } from 'node:os';
 import { createHash } from 'node:crypto';
@@ -171,18 +171,35 @@ export function loadLockFile(): LockFile {
 export function saveLockFile(lock: LockFile): void {
   const dir = dirname(LOCK_FILE);
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-  writeFileSync(LOCK_FILE, JSON.stringify(lock, null, 2), 'utf-8');
+  const tmpFile = `${LOCK_FILE}.${process.pid}.tmp`;
+  writeFileSync(tmpFile, JSON.stringify(lock, null, 2), 'utf-8');
+  renameSync(tmpFile, LOCK_FILE);
 }
 
 export function addSkillToLock(name: string, entry: LockEntry): void {
   const lock = loadLockFile();
-  lock.skills[name] = entry;
+  const key = `${entry.source}:${name}`;
+  const existing = lock.skills[key];
+  if (existing) {
+    const mergedAgents = [...new Set([...existing.agents, ...entry.agents])];
+    lock.skills[key] = { ...entry, agents: mergedAgents };
+  } else {
+    lock.skills[key] = entry;
+  }
   saveLockFile(lock);
 }
 
-export function removeSkillFromLock(name: string): void {
+export function removeSkillFromLock(name: string, source?: string): void {
   const lock = loadLockFile();
-  delete lock.skills[name];
+  if (source) {
+    delete lock.skills[`${source}:${name}`];
+  } else {
+    for (const key of Object.keys(lock.skills)) {
+      if (key === name || key.endsWith(`:${name}`)) {
+        delete lock.skills[key];
+      }
+    }
+  }
   saveLockFile(lock);
 }
 

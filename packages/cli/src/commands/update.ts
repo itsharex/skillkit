@@ -101,7 +101,7 @@ export class UpdateCommand extends Command {
           }
 
           const parsed = provider.parseSource?.(metadata.source);
-          if (parsed && 'owner' in parsed && 'repo' in parsed) {
+          if (parsed && 'owner' in parsed && 'repo' in parsed && (provider.type === 'github' || provider.type === 'skills-sh')) {
             const activity = await fetchGitHubActivity(parsed.owner, parsed.repo);
             if (activity?.pushedAt && metadata.updatedAt && activity.pushedAt <= metadata.updatedAt) {
               s.stop(`${skill.name}: no changes detected`);

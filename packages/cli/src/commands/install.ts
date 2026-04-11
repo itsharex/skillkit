@@ -177,16 +177,16 @@ export class InstallCommand extends Command {
         skillsToInstall, targetAgents, installMethod, providerAdapter, cloneResult, s,
       );
 
-      this.cleanupTemp(cloneResult);
       this.updateAgentsMd(installResults.length);
       await this.showResults(installResults, targetAgents, providerAdapter, isInteractive);
 
       return 0;
     } catch (err) {
-      if (cloneResult) this.cleanupTemp(cloneResult);
       s.stop(colors.error("Installation failed"));
       console.log(colors.muted(err instanceof Error ? err.message : String(err)));
       return 1;
+    } finally {
+      if (cloneResult) this.cleanupTemp(cloneResult);
     }
   }
 
@@ -448,7 +448,10 @@ export class InstallCommand extends Command {
       "supabase/agent-skills",
       "stripe/ai",
     ];
-    const isOfficial = officialSources.some((prefix) => this.source.startsWith(prefix));
+    const sourceProvider = detectProvider(this.source);
+    const parsedSource = sourceProvider?.parseSource(this.source);
+    const normalizedSource = parsedSource ? `${parsedSource.owner}/${parsedSource.repo}` : this.source;
+    const isOfficial = officialSources.includes(normalizedSource);
 
     const scorer = new TrustScorer();
     for (const skill of skillsToInstall) {
@@ -462,7 +465,7 @@ export class InstallCommand extends Command {
           score: result.score,
           source: this.source,
         });
-        console.log(`  Trust: ${badge}`);
+        console.log(`  ${colors.primary(skill.name)}: ${badge}`);
       }
     }
     console.log("");
@@ -585,15 +588,6 @@ export class InstallCommand extends Command {
           metadata.checksum = computeSkillChecksum(targetPath);
           saveSkillMetadata(targetPath, metadata);
 
-          addSkillToLock(skillName, {
-            source: this.source,
-            sourceType: providerAdapter!.type,
-            installedAt: new Date().toISOString(),
-            checksum: metadata.checksum,
-            agents: [agentType],
-            path: targetPath,
-          });
-
           installedAgents.push(agentType);
           s.stop(`Installed ${skillName} to ${adapter.name}${useSymlink ? " (symlink)" : ""}`);
         } catch (err) {
@@ -603,11 +597,20 @@ export class InstallCommand extends Command {
       }
 
       if (installedAgents.length > 0) {
+        const primaryInstallPath = join(getInstallDir(this.global, installedAgents[0] as AgentType), skillName);
+        addSkillToLock(skillName, {
+          source: this.source,
+          sourceType: providerAdapter!.type,
+          installedAt: new Date().toISOString(),
+          checksum: computeSkillChecksum(primaryInstallPath),
+          agents: installedAgents,
+          path: primaryInstallPath,
+        });
         installResults.push({
           skillName,
           method: installMethod,
           agents: installedAgents,
-          path: join(getInstallDir(this.global, installedAgents[0] as AgentType), skillName),
+          path: primaryInstallPath,
         });
       }
     }

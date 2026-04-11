@@ -259,7 +259,7 @@ export class FindCommand extends Command {
       );
       console.log(
         colors.muted(
-          "  skillkit find -f <query>  # Also search GitHub SKILL.md files",
+          "  skillkit find <query>  # Search marketplace + GitHub",
         ),
       );
       console.log(colors.muted("  skillkit ui               # Browse in TUI"));
