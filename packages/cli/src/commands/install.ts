@@ -26,6 +26,8 @@ import {
   AgentsMdParser,
   AgentsMdGenerator,
   SkillsShRegistry,
+  TrustScorer,
+  readSkillContent,
 } from "@skillkit/core";
 import type { SkillsShStats } from "@skillkit/core";
 import type { SkillMetadata, GitProvider, AgentType } from "@skillkit/core";
@@ -56,6 +58,7 @@ import {
   getLastAgents,
   formatQualityBadge,
   getQualityGradeFromScore,
+  formatTrustBadge,
   type InstallResult,
 } from "../onboarding/index.js";
 
@@ -434,6 +437,33 @@ export class InstallCommand extends Command {
       }
       console.log("");
     }
+
+    const officialSources = [
+      "anthropics/skills",
+      "vercel-labs/agent-skills",
+      "expo/skills",
+      "remotion-dev/skills",
+      "supabase/agent-skills",
+      "stripe/ai",
+    ];
+    const isOfficial = officialSources.some((prefix) => this.source.startsWith(prefix));
+
+    const scorer = new TrustScorer();
+    for (const skill of skillsToInstall) {
+      const content = readSkillContent(skill.path);
+      if (content) {
+        const result = scorer.score(content);
+        const badge = formatTrustBadge({
+          isOfficial,
+          officialSource: isOfficial ? this.source : undefined,
+          grade: result.grade,
+          score: result.score,
+          source: this.source,
+        });
+        console.log(`  Trust: ${badge}`);
+      }
+    }
+    console.log("");
 
     const agentDisplay =
       targetAgents.length <= 3

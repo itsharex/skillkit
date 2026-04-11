@@ -178,3 +178,25 @@ export function formatQualityBadgeCompact(score: number): string {
   if (score >= 60) return colors.warning(grade);
   return colors.error(grade);
 }
+
+export function formatTrustBadge(options: {
+  isOfficial: boolean;
+  officialSource?: string;
+  grade?: 'trusted' | 'review' | 'caution';
+  score?: number;
+  source?: string;
+}): string {
+  if (options.isOfficial) {
+    const label = options.officialSource || options.source || '';
+    return `${colors.success('[Official]')} ${label}`;
+  }
+  const label = options.source || '';
+  const scoreText = typeof options.score === 'number' ? ` (score: ${options.score}/10)` : '';
+  if (options.grade === 'trusted') {
+    return `${colors.success('[Trusted]')} ${label}${scoreText}`;
+  }
+  if (options.grade === 'caution') {
+    return `${colors.error('[Caution]')} ${label}${scoreText}`;
+  }
+  return `${colors.warning('[Review]')} ${label}${scoreText}`;
+}
