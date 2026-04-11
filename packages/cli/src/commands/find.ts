@@ -177,7 +177,9 @@ export class FindCommand extends Command {
       s.start("Searching skills.sh + external registries...");
       const fedSearch = new FederatedSearch();
       fedSearch.addRegistry(new SkillsShRegistry());
-      fedSearch.addRegistry(new GitHubSkillRegistry());
+      if (this.federated) {
+        fedSearch.addRegistry(new GitHubSkillRegistry());
+      }
       try {
         const fedResult = await fedSearch.search(searchTerm, {
           limit: parseInt(this.limit, 10) || 10,
