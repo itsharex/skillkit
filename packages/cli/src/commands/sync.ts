@@ -91,8 +91,9 @@ export class SyncCommand extends Command {
 
         agentType = agentResult as AgentType;
       } else {
-        // Non-interactive: always detect, don't rely on default config
+        s.start('Detecting agent...');
         agentType = await detectAgent();
+        s.stop(`Detected: ${formatAgent(agentType)}`);
       }
 
       const adapter = getAdapter(agentType);

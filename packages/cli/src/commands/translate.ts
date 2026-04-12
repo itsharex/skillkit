@@ -1,7 +1,7 @@
 import { Command, Option } from 'clipanion';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join, basename, dirname } from 'node:path';
-import { colors, warn, success, error } from '../onboarding/index.js';
+import { colors, warn, success, error, spinner } from '../onboarding/index.js';
 import {
   type AgentType,
   translateSkill,
@@ -226,6 +226,7 @@ export class TranslateCommand extends Command {
 
     let successCount = 0;
     let failed = 0;
+    const s = spinner();
 
     for (const skill of skills) {
       const skillMdPath = join(skill.path, 'SKILL.md');
@@ -235,9 +236,13 @@ export class TranslateCommand extends Command {
         continue;
       }
 
+      s.start(`Translating ${skill.name}...`);
+
       const result = translateSkillFile(skillMdPath, targetAgent, {
         addMetadata: this.metadata,
       });
+
+      s.stop(`Translated ${skill.name}`);
 
       if (result.success) {
         if (this.dryRun) {
@@ -332,11 +337,16 @@ export class TranslateCommand extends Command {
     }
 
     // Read and translate
+    const s = spinner();
+    s.start(`Translating to ${targetAgent}...`);
+
     const content = readFileSync(sourcePath!, 'utf-8');
     const result = translateSkill(content, targetAgent, {
       addMetadata: this.metadata,
       sourceFilename: basename(sourcePath!),
     });
+
+    s.stop(`Translation complete`);
 
     if (!result.success) {
       error('Translation failed:');

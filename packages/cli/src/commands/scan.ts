@@ -2,7 +2,7 @@ import { Command, Option } from 'clipanion';
 import { resolve } from 'node:path';
 import { existsSync } from 'node:fs';
 import { SkillScanner, formatResult, Severity } from '@skillkit/core';
-import { error } from '../onboarding/index.js';
+import { error, spinner } from '../onboarding/index.js';
 
 const SEVERITY_MAP: Record<string, Severity> = {
   critical: Severity.CRITICAL,
@@ -81,7 +81,10 @@ export class ScanCommand extends Command {
       skipRules,
     });
 
+    const s = spinner();
+    if (!this.json) s.start('Scanning for vulnerabilities...');
     const result = await scanner.scan(targetPath);
+    if (!this.json) s.stop(`Scan complete (${result.findings.length} finding(s))`);
 
     if (this.json) {
       this.context.stdout.write(formatResult(result, 'json') + '\n');

@@ -13,6 +13,7 @@ import {
   success,
   error,
   step,
+  spinner,
   formatQualityBadge,
   getQualityGradeFromScore,
 } from "../onboarding/index.js";
@@ -146,9 +147,12 @@ export class PublishCommand extends Command {
     const basePath = this.skillPath || process.cwd();
     const outputDir = this.output || basePath;
 
-    step("Generating well-known skills structure...\n");
+    const s = spinner();
+    s.start("Generating well-known skills structure...");
 
     const discoveredSkills = this.discoverSkills(basePath);
+
+    s.stop(`Discovered ${discoveredSkills.length} skill(s)`);
 
     if (discoveredSkills.length === 0) {
       error("No skills found");

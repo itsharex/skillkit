@@ -12,6 +12,7 @@ import {
   CommunitySignalsEvaluator,
 } from '@skillkit/core';
 import type { EvalTier, EvalOptions } from '@skillkit/core';
+import { spinner } from '../onboarding/index.js';
 
 export class EvalCommand extends Command {
   static override paths = [['eval']];
@@ -132,7 +133,10 @@ export class EvalCommand extends Command {
     engine.registerEvaluator(new DynamicBenchmarkEvaluator());
     engine.registerEvaluator(new CommunitySignalsEvaluator());
 
+    const s = spinner();
+    s.start('Evaluating skill...');
     const result = await engine.evaluate(targetPath, options);
+    s.stop(`Evaluation complete (score: ${result.overallScore})`);
 
     this.context.stdout.write(formatEvalResult(result, this.format) + '\n');
 
