@@ -34,11 +34,32 @@ runs:
 
     - name: Run SkillKit
       shell: bash
+      env:
+        SK_COMMAND: ${{ inputs.command }}
+        SK_SOURCE: ${{ inputs.source }}
+        SK_AGENT: ${{ inputs.agent }}
+        SK_ARGS: ${{ inputs.args }}
       run: |
-        if [ "${{ inputs.command }}" = "install" ] && [ -n "${{ inputs.source }}" ]; then
-          skillkit install "${{ inputs.source }}" --agent "${{ inputs.agent }}" --yes --json ${{ inputs.args }}
-        elif [ "${{ inputs.command }}" = "scan" ] && [ -n "${{ inputs.source }}" ]; then
-          skillkit scan "${{ inputs.source }}" --json ${{ inputs.args }}
-        else
-          skillkit ${{ inputs.command }} ${{ inputs.args }}
-        fi
+        case "${SK_COMMAND}" in
+          install)
+            if [ -n "${SK_SOURCE}" ]; then
+              skillkit install "${SK_SOURCE}" --agent "${SK_AGENT}" --yes --json ${SK_ARGS}
+            else
+              echo "Error: source is required for install" >&2; exit 1
+            fi
+            ;;
+          scan)
+            if [ -n "${SK_SOURCE}" ]; then
+              skillkit scan "${SK_SOURCE}" --json ${SK_ARGS}
+            else
+              echo "Error: source is required for scan" >&2; exit 1
+            fi
+            ;;
+          check|sync|list|update)
+            skillkit "${SK_COMMAND}" ${SK_ARGS}
+            ;;
+          *)
+            echo "Error: unsupported command '${SK_COMMAND}'. Use: install, scan, check, sync, list, update" >&2
+            exit 1
+            ;;
+        esac

@@ -70,7 +70,7 @@ export class FindCommand extends Command {
   });
 
   async execute(): Promise<number> {
-    const s = spinner();
+    const s = this.json ? { start: () => {}, stop: () => {}, message: () => {} } : spinner();
     const limit = parseInt(this.limit, 10) || 10;
 
     if (!this.quiet && !this.json) {

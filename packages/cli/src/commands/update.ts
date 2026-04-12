@@ -28,7 +28,7 @@ export class UpdateCommand extends Command {
   });
 
   async execute(): Promise<number> {
-    const s = spinner();
+    const s = this.json ? { start: () => {}, stop: () => {}, message: () => {} } : spinner();
     const searchDirs = getSearchDirs();
 
     let skillsToUpdate;
@@ -51,7 +51,7 @@ export class UpdateCommand extends Command {
       return 0;
     }
 
-    step(`Updating ${skillsToUpdate.length} skill(s)...`);
+    if (!this.json) step(`Updating ${skillsToUpdate.length} skill(s)...`);
 
     let updated = 0;
     let skipped = 0;

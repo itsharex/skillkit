@@ -81,10 +81,16 @@ export class ScanCommand extends Command {
       skipRules,
     });
 
-    const s = spinner();
-    if (!this.json) s.start('Scanning for vulnerabilities...');
-    const result = await scanner.scan(targetPath);
-    if (!this.json) s.stop(`Scan complete (${result.findings.length} finding(s))`);
+    const s = this.json ? { start: () => {}, stop: () => {} } : spinner();
+    s.start('Scanning for vulnerabilities...');
+    let result;
+    try {
+      result = await scanner.scan(targetPath);
+      s.stop(`Scan complete (${result.findings.length} finding(s))`);
+    } catch (err) {
+      s.stop('Scan failed');
+      throw err;
+    }
 
     if (this.json) {
       this.context.stdout.write(formatResult(result, 'json') + '\n');

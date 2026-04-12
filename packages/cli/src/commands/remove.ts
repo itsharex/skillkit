@@ -108,16 +108,6 @@ export class RemoveCommand extends Command {
       }
     }
 
-    if (this.json) {
-      console.log(JSON.stringify({
-        success: failed === 0,
-        removed: removedNames,
-        failed: failedNames,
-        total: removed + failed,
-      }));
-      return failed > 0 ? 1 : 0;
-    }
-
     if (removed > 0) {
       try {
         const agentsMdPath = join(process.cwd(), 'AGENTS.md');
@@ -135,7 +125,19 @@ export class RemoveCommand extends Command {
         warn('Warning: Failed to update AGENTS.md');
         console.error(colors.muted(err instanceof Error ? err.message : String(err)));
       }
-      console.log(colors.muted('\nRun `skillkit sync` to update your agent config'));
+      if (!this.json) {
+        console.log(colors.muted('\nRun `skillkit sync` to update your agent config'));
+      }
+    }
+
+    if (this.json) {
+      console.log(JSON.stringify({
+        success: failed === 0,
+        removed: removedNames,
+        failed: failedNames,
+        total: removed + failed,
+      }));
+      return failed > 0 ? 1 : 0;
     }
 
     return failed > 0 ? 1 : 0;

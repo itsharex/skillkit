@@ -58,7 +58,7 @@ export class CheckCommand extends Command {
 
   async execute(): Promise<number> {
     const searchDirs = getSearchDirs();
-    const s = spinner();
+    const s = this.json ? { start: () => {}, stop: () => {}, message: () => {} } : spinner();
 
     if (!this.quiet && !this.json) {
       header('Check Updates');

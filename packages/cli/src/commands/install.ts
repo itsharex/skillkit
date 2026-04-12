@@ -140,7 +140,7 @@ export class InstallCommand extends Command {
   async execute(): Promise<number> {
     const isInteractive =
       process.stdin.isTTY && !this.skills && !this.all && !this.yes && !this.json;
-    const s = spinner();
+    const s = this.json ? { start: () => {}, stop: () => {}, message: () => {} } : spinner();
     let cloneResult: Awaited<ReturnType<typeof this.resolveSource>>["cloneResult"] = null;
 
     try {

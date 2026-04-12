@@ -133,10 +133,17 @@ export class EvalCommand extends Command {
     engine.registerEvaluator(new DynamicBenchmarkEvaluator());
     engine.registerEvaluator(new CommunitySignalsEvaluator());
 
-    const s = spinner();
+    const isJson = this.format === 'json';
+    const s = isJson ? { start: () => {}, stop: () => {} } : spinner();
     s.start('Evaluating skill...');
-    const result = await engine.evaluate(targetPath, options);
-    s.stop(`Evaluation complete (score: ${result.overallScore})`);
+    let result;
+    try {
+      result = await engine.evaluate(targetPath, options);
+      s.stop(`Evaluation complete (score: ${result.overallScore})`);
+    } catch (err) {
+      s.stop('Evaluation failed');
+      throw err;
+    }
 
     this.context.stdout.write(formatEvalResult(result, this.format) + '\n');
 
