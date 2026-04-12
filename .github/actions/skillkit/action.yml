@@ -1,0 +1,44 @@
+name: 'SkillKit'
+description: 'Install, scan, and manage AI agent skills in CI/CD'
+inputs:
+  command:
+    description: 'SkillKit command to run (install, scan, check, sync)'
+    required: true
+  source:
+    description: 'Skill source for install (e.g. owner/repo)'
+    required: false
+  args:
+    description: 'Additional arguments'
+    required: false
+    default: ''
+  node-version:
+    description: 'Node.js version'
+    required: false
+    default: '20'
+  agent:
+    description: 'Target agent (e.g. claude-code, cursor)'
+    required: false
+    default: 'claude-code'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+
+    - name: Install SkillKit
+      shell: bash
+      run: npm install -g skillkit@latest
+
+    - name: Run SkillKit
+      shell: bash
+      run: |
+        if [ "${{ inputs.command }}" = "install" ] && [ -n "${{ inputs.source }}" ]; then
+          skillkit install "${{ inputs.source }}" --agent "${{ inputs.agent }}" --yes --json ${{ inputs.args }}
+        elif [ "${{ inputs.command }}" = "scan" ] && [ -n "${{ inputs.source }}" ]; then
+          skillkit scan "${{ inputs.source }}" --json ${{ inputs.args }}
+        else
+          skillkit ${{ inputs.command }} ${{ inputs.args }}
+        fi
