@@ -53,11 +53,21 @@ ${skillsXml}
   }
 
   parseConfig(content: string): string[] {
+    const startMarker = '<!-- SKILLS_TABLE_START -->';
+    const endMarker = '<!-- SKILLS_TABLE_END -->';
+    const startIndex = content.indexOf(startMarker);
+    const endIndex = content.indexOf(endMarker);
+
+    if (startIndex === -1 || endIndex === -1) {
+      return [];
+    }
+
+    const scopedContent = content.substring(startIndex + startMarker.length, endIndex);
     const skillNames: string[] = [];
     const skillRegex = /<name>([^<]+)<\/name>/g;
     let match;
 
-    while ((match = skillRegex.exec(content)) !== null) {
+    while ((match = skillRegex.exec(scopedContent)) !== null) {
       skillNames.push(match[1].trim());
     }
 
@@ -71,8 +81,7 @@ ${skillsXml}
   async isDetected(): Promise<boolean> {
     const projectHermes = join(process.cwd(), '.hermes');
     const globalHermes = join(homedir(), '.hermes');
-    const hermesMd = join(process.cwd(), 'AGENTS.md');
 
-    return existsSync(projectHermes) || existsSync(globalHermes) || existsSync(hermesMd);
+    return existsSync(projectHermes) || existsSync(globalHermes);
   }
 }

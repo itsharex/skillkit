@@ -140,7 +140,7 @@ describe('agents', () => {
       expect(adapter.type).toBe('windsurf');
       expect(adapter.name).toBe('Windsurf');
       expect(adapter.skillsDir).toBe('.windsurf/skills');
-      expect(adapter.configFile).toBe('.windsurfrules');
+      expect(adapter.configFile).toBe('.windsurf/rules/skills.md');
     });
 
     it('should return adapter for hermes', () => {

@@ -154,11 +154,29 @@ describe('Agent Adapters', () => {
       expect(config).toContain('SKILLS_TABLE_START');
     });
 
-    it('should parse skill names from XML', () => {
+    it('should parse skill names from XML correctly within markers', () => {
       const adapter = getAdapter('hermes');
-      const xml = `<available_skills><skill><name>git-ops</name></skill></available_skills>`;
+      const xml = `
+<!-- SKILLS_TABLE_START -->
+<available_skills><skill><name>git-ops</name></skill></available_skills>
+<!-- SKILLS_TABLE_END -->`;
       const names = adapter.parseConfig(xml);
       expect(names).toContain('git-ops');
+    });
+
+    it('should ignore <name> tags outside of sync markers', () => {
+      const adapter = getAdapter('hermes');
+      const xml = `
+<mission><name>save-the-world</name></mission>
+<!-- SKILLS_TABLE_START -->
+<available_skills><skill><name>git-ops</name></skill></available_skills>
+<!-- SKILLS_TABLE_END -->
+<footer_meta><name>internal-id</name></footer_meta>`;
+      const names = adapter.parseConfig(xml);
+      expect(names).toHaveLength(1);
+      expect(names).toContain('git-ops');
+      expect(names).not.toContain('save-the-world');
+      expect(names).not.toContain('internal-id');
     });
   });
 });
