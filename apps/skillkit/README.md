@@ -5,8 +5,27 @@ Universal skills manager for AI coding agents. Install, manage, and sync skills 
 ## Installation
 
 ```bash
+# Full install (default) — every feature, everything works:
 npm install -g skillkit
+
+# Slim install — core commands only, ~75% smaller, no native addons:
+npm install -g skillkit --omit=optional
 ```
+
+### What's optional
+
+Four power features ship as **optional dependencies** so the core CLI
+stays lean. They install automatically with `npm install -g skillkit`,
+and are skipped with `--omit=optional`:
+
+| Feature                  | Package              | Command                        |
+| ------------------------ | -------------------- | ------------------------------ |
+| Interactive terminal UI  | `@skillkit/tui`      | `skillkit ui` / `skillkit tui` |
+| REST/OpenAPI server      | `@skillkit/api`      | `skillkit serve`               |
+| Peer mesh networking     | `@skillkit/mesh`     | `skillkit mesh …`              |
+| Inter-agent messaging    | `@skillkit/messaging`| `skillkit message …`           |
+
+Add one later with `npm install -g @skillkit/tui` (or `api` / `mesh` / `messaging`).
 
 ## Quick Start
 

@@ -33,6 +33,39 @@ bun add -g skillkit
 
 Both `skillkit` and `sk` work as command aliases.
 
+## Full vs slim install
+
+SkillKit ships four power features as **optional dependencies** so the
+core install stays small. The default `npm install -g skillkit` installs
+every feature; `--omit=optional` installs only the core CLI.
+
+| Feature                  | Package              | Command                        |
+| ------------------------ | -------------------- | ------------------------------ |
+| Interactive terminal UI  | `@skillkit/tui`      | `skillkit ui` / `skillkit tui` |
+| REST/OpenAPI server      | `@skillkit/api`      | `skillkit serve`               |
+| Peer mesh networking     | `@skillkit/mesh`     | `skillkit mesh …`              |
+| Inter-agent messaging    | `@skillkit/messaging`| `skillkit message …`           |
+
+```bash
+# Full (default) — every feature works out of the box:
+npm install -g skillkit
+
+# Slim — core commands only, ~75% smaller, no native addons, 0 deprecation warnings:
+npm install -g skillkit --omit=optional
+```
+
+Add one later:
+
+```bash
+npm install -g @skillkit/tui         # enables: skillkit ui
+npm install -g @skillkit/api         # enables: skillkit serve
+npm install -g @skillkit/mesh        # enables: skillkit mesh
+npm install -g @skillkit/messaging   # enables: skillkit message
+```
+
+The CLI catches a missing optional feature and prints a one-line hint,
+so you'll never see an unhandled stack trace.
+
 ## Verify
 
 ```bash
