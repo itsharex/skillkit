@@ -414,6 +414,28 @@ npm install -g @skillkit/mesh        # skillkit mesh
 npm install -g @skillkit/messaging   # skillkit message
 ```
 
+### Using `npx` (no install)
+
+`npx skillkit add <owner/repo>` is the fastest way to try it. First run
+downloads the package into the npx cache (`~/.npm/_npx/`); every run
+after that is instant.
+
+```bash
+# Full (defaults to installing optional features):
+npx skillkit add anthropics/skills
+
+# Slim — core commands only, ~75% fewer packages, 0 warnings:
+npx --omit=optional skillkit add anthropics/skills
+```
+
+Run `npx skillkit` a few times and you will want the global install —
+it skips the prompt-to-proceed and kills the per-release cache refetch:
+
+```bash
+npm install -g skillkit --omit=optional   # 9 s, 118 packages, one time
+skillkit add anthropics/skills            # instant every run
+```
+
 ## License
 
 Apache License 2.0 — see [LICENSE](LICENSE).

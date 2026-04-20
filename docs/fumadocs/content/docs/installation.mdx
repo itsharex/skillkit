@@ -66,6 +66,28 @@ npm install -g @skillkit/messaging   # enables: skillkit message
 The CLI catches a missing optional feature and prints a one-line hint,
 so you'll never see an unhandled stack trace.
 
+## Using `npx`
+
+`npx skillkit add <owner/repo>` runs without a global install. First run
+downloads into the npx cache (`~/.npm/_npx/`); every call after that is
+instant until the cache expires or a new version ships.
+
+```bash
+# Full — every feature works:
+npx skillkit add anthropics/skills
+
+# Slim — core commands only, 75% fewer packages, 0 warnings:
+npx --omit=optional skillkit add anthropics/skills
+```
+
+If you use `npx skillkit` more than a couple of times, install globally
+to skip the prompt-to-proceed and avoid the per-release cache refetch:
+
+```bash
+npm install -g skillkit --omit=optional
+skillkit add anthropics/skills
+```
+
 ## Verify
 
 ```bash

@@ -27,6 +27,25 @@ and are skipped with `--omit=optional`:
 
 Add one later with `npm install -g @skillkit/tui` (or `api` / `mesh` / `messaging`).
 
+### Using `npx`
+
+`npx skillkit add <owner/repo>` works with zero install. First run pulls
+the package into the npx cache (`~/.npm/_npx/`); every subsequent run
+from the same cache is instant.
+
+```bash
+npx skillkit add anthropics/skills                    # full
+npx --omit=optional skillkit add anthropics/skills    # slim, 118 pkgs, 9 s
+```
+
+Running `npx` more than a couple of times? Install globally — no
+prompt-to-proceed, no refetch on each release:
+
+```bash
+npm install -g skillkit --omit=optional
+skillkit add anthropics/skills
+```
+
 ## Quick Start
 
 ```bash
