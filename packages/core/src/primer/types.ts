@@ -203,4 +203,10 @@ export const AGENT_INSTRUCTION_TEMPLATES: Record<string, AgentInstructionTemplat
     format: 'markdown',
     sectionOrder: ['overview', 'stack', 'commands', 'conventions', 'guidelines'],
   },
+  'hermes': {
+    agent: 'hermes',
+    filename: 'AGENTS.md',
+    format: 'xml',
+    sectionOrder: ['overview', 'stack', 'commands', 'conventions', 'structure', 'guidelines'],
+  },
 };
