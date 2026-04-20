@@ -53,15 +53,16 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
-    "@skillkit/api": "workspace:*",
     "@skillkit/core": "workspace:*",
     "@skillkit/agents": "workspace:*",
     "@skillkit/cli": "workspace:*",
-    "@skillkit/tui": "workspace:*",
-    "@skillkit/memory": "workspace:*",
-    "@skillkit/mesh": "workspace:*",
-    "@skillkit/messaging": "workspace:*",
     "clipanion": "^4.0.0-rc.4"
+  },
+  "optionalDependencies": {
+    "@skillkit/api": "workspace:*",
+    "@skillkit/tui": "workspace:*",
+    "@skillkit/mesh": "workspace:*",
+    "@skillkit/messaging": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.10.5",
