@@ -18,7 +18,6 @@
 [![CI](https://img.shields.io/github/actions/workflow/status/rohitg00/skillkit/ci.yml?style=for-the-badge&logo=githubactions&logoColor=white&labelColor=0D1117&color=6BCB77)](https://github.com/rohitg00/skillkit/actions/workflows/ci.yml)
 [![license](https://img.shields.io/badge/License-Apache_2.0-4D96FF?style=for-the-badge&labelColor=0D1117)](LICENSE)
 
-<br/>
 
 <a href="https://skillkit.sh"><img src="assets/tags/skills.svg" alt="400K+ skills"></a>
 <a href="#supported-agents"><img src="assets/tags/agents.svg" alt="45 agents"></a>
@@ -27,17 +26,11 @@
 <a href="LICENSE"><img src="assets/tags/license.svg" alt="Apache 2.0"></a>
 <a href="CONTRIBUTING.md"><img src="assets/tags/prs-welcome.svg" alt="PRs welcome"></a>
 
-<br/>
-
 <a href="#full-vs-slim"><img src="assets/tags/slim-install.svg" alt="slim install"></a>
 <a href="https://github.com/rohitg00/skillkit/releases/latest"><img src="assets/tags/v1.23.0.svg" alt="v1.23.0"></a>
 <img src="assets/tags/new.svg" alt="new">
 <img src="assets/tags/one-skill.svg" alt="one skill">
 <img src="assets/tags/every-agent.svg" alt="every agent">
-
-<sub>Tags are SVGs under <a href="assets/tags/"><code>/assets/tags/</code></a>. Fork and remix.</sub>
-
-<br/>
 
 ### Quick nav
 
