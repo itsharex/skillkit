@@ -214,6 +214,10 @@ function updateConfigContent(existing: string, newConfig: string, agentType: Age
       start: '<!-- SKILLKIT_SKILLS_START -->',
       end: '<!-- SKILLKIT_SKILLS_END -->',
     },
+    hermes: {
+      start: '<!-- SKILLS_TABLE_START -->',
+      end: '<!-- SKILLS_TABLE_END -->',
+    },
   };
 
   const agentMarkers = markers[agentType] || markers.universal;
