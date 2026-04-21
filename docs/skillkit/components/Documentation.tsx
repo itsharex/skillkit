@@ -60,14 +60,42 @@ const sections: DocSection[] = [
     content: (
       <div className="space-y-4">
         <h3 className="text-lg font-semibold text-white">Quick Start</h3>
-        <CodeBlock>{`# Install globally via npm
+        <CodeBlock>{`# Full install — every feature works out of the box (default):
 npm install -g skillkit
 
-# Or use npx directly
-npx skillkit --help
+# Slim install — core commands only, ~75% smaller, 0 deprecation warnings:
+npm install -g skillkit --omit=optional
 
-# Or install via pnpm
-pnpm add -g skillkit`}</CodeBlock>
+# Or use npx directly:
+npx skillkit --help`}</CodeBlock>
+
+        <h3 className="text-lg font-semibold text-white mt-6">Optional Features</h3>
+        <p className="text-zinc-300 text-sm">
+          TUI, REST server, peer mesh, and inter-agent messaging ship as optional
+          dependencies. They install by default, or add later à la carte:
+        </p>
+        <CodeBlock>{`npm install -g @skillkit/tui         # enables: skillkit ui
+npm install -g @skillkit/api         # enables: skillkit serve
+npm install -g @skillkit/mesh        # enables: skillkit mesh
+npm install -g @skillkit/messaging   # enables: skillkit message`}</CodeBlock>
+
+        <h3 className="text-lg font-semibold text-white mt-6">Using npx (no install)</h3>
+        <p className="text-zinc-300 text-sm">
+          <code className="text-zinc-200">npx skillkit add &lt;owner/repo&gt;</code> runs with zero install.
+          First call caches the package at <code className="text-zinc-200">~/.npm/_npx/</code>; every
+          run after that is instant until a new version ships.
+        </p>
+        <CodeBlock>{`# Full (default):
+npx skillkit add anthropics/skills
+
+# Slim — core only, 75% fewer packages, 0 warnings:
+npx --omit=optional skillkit add anthropics/skills`}</CodeBlock>
+        <p className="text-zinc-300 text-sm">
+          Using npx more than a couple times? Install globally to skip the
+          prompt-to-proceed and avoid the per-release cache refetch:
+        </p>
+        <CodeBlock>{`npm install -g skillkit --omit=optional
+skillkit add anthropics/skills`}</CodeBlock>
 
         <h3 className="text-lg font-semibold text-white mt-6">Verify Installation</h3>
         <CodeBlock>{`skillkit --version

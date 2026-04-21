@@ -117,9 +117,11 @@ export async function quickAgentSelect(options: {
   message?: string;
   agents: string[];
   lastSelected?: string[];
-}): Promise<{ agents: string[]; method: 'last' | 'all' | 'select' } | symbol> {
-  const { agents, lastSelected = [] } = options;
+  detected?: string;
+}): Promise<{ agents: string[]; method: 'last' | 'all' | 'select' | 'detected' } | symbol> {
+  const { agents, lastSelected = [], detected } = options;
   const hasLast = lastSelected.length > 0 && lastSelected.some(a => agents.includes(a));
+  const hasDetected = !!detected && agents.includes(detected);
 
   const selectOptions: Array<{ value: string; label: string; hint?: string }> = [];
 
@@ -130,21 +132,29 @@ export async function quickAgentSelect(options: {
 
     selectOptions.push({
       value: 'last',
-      label: `Same as last time (Recommended)`,
+      label: 'Same as last time (Recommended)',
       hint: `${agentList}${more}`,
     });
   }
 
-  selectOptions.push({
-    value: 'all',
-    label: 'All detected agents',
-    hint: `${agents.length} agent${agents.length !== 1 ? 's' : ''}`,
-  });
+  if (hasDetected) {
+    selectOptions.push({
+      value: 'detected',
+      label: `Just ${formatAgent(detected!)} (detected)`,
+      hint: detected,
+    });
+  }
 
   selectOptions.push({
     value: 'select',
     label: 'Select specific agents',
-    hint: 'Choose manually',
+    hint: 'Choose manually, spacebar to toggle',
+  });
+
+  selectOptions.push({
+    value: 'all',
+    label: 'All supported agents',
+    hint: `${agents.length} agent${agents.length !== 1 ? 's' : ''} — writes to every adapter`,
   });
 
   const result = await clack.select({
@@ -156,20 +166,37 @@ export async function quickAgentSelect(options: {
     return result;
   }
 
-  const method = result as 'last' | 'all' | 'select';
+  const method = result as 'last' | 'all' | 'select' | 'detected';
 
   if (method === 'last') {
     return { agents: lastSelected.filter(a => agents.includes(a)), method };
   }
 
+  if (method === 'detected') {
+    return { agents: [detected!], method };
+  }
+
   if (method === 'all') {
+    const confirmed = await clack.confirm({
+      message: `Install to all ${agents.length} agents?`,
+      initialValue: false,
+    });
+
+    if (clack.isCancel(confirmed) || !confirmed) {
+      return clack.isCancel(confirmed) ? confirmed : { agents: [], method: 'all' };
+    }
+
     return { agents, method };
   }
+
+  const initialValues = lastSelected.length > 0
+    ? lastSelected.filter(a => agents.includes(a))
+    : hasDetected ? [detected!] : [];
 
   const selected = await agentMultiselect({
     message: 'Select agents',
     agents,
-    initialValues: lastSelected.length > 0 ? lastSelected : agents,
+    initialValues,
   });
 
   if (clack.isCancel(selected)) {

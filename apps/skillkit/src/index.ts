@@ -1,6 +1,7 @@
-// Re-export all public APIs from packages
 export * from '@skillkit/core';
 export * from '@skillkit/agents';
 
-// Re-export TUI entry point
-export { startTUI } from '@skillkit/tui';
+export async function startTUI(...args: unknown[]): Promise<unknown> {
+  const mod = await import('@skillkit/tui');
+  return mod.startTUI(...(args as Parameters<typeof mod.startTUI>));
+}

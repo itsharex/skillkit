@@ -1,6 +1,6 @@
 {
   "name": "skillkit",
-  "version": "1.22.1",
+  "version": "1.23.0",
   "description": "Supercharge AI coding agents with portable skills. Install, translate, and share skills across Claude Code, Cursor, Codex, Copilot & 41 more",
   "type": "module",
   "bin": {
@@ -53,15 +53,16 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
-    "@skillkit/api": "workspace:*",
     "@skillkit/core": "workspace:*",
     "@skillkit/agents": "workspace:*",
     "@skillkit/cli": "workspace:*",
-    "@skillkit/tui": "workspace:*",
-    "@skillkit/memory": "workspace:*",
-    "@skillkit/mesh": "workspace:*",
-    "@skillkit/messaging": "workspace:*",
     "clipanion": "^4.0.0-rc.4"
+  },
+  "optionalDependencies": {
+    "@skillkit/api": "workspace:*",
+    "@skillkit/tui": "workspace:*",
+    "@skillkit/mesh": "workspace:*",
+    "@skillkit/messaging": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.10.5",

@@ -7,4 +7,7 @@ export default defineConfig({
   splitting: false,
   sourcemap: true,
   clean: true,
+  platform: 'node',
+  target: 'node18',
+  skipNodeModulesBundle: true,
 });
