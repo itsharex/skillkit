@@ -246,7 +246,7 @@ export function CompatibilityMatrix(): React.ReactElement {
           <div>
             <h2 className="text-lg sm:text-xl font-bold text-white mb-1 font-mono">Compatibility Matrix</h2>
             <p className="text-zinc-500 font-mono text-[10px] sm:text-xs">
-              Skill support across all 45 agents and {CATEGORIES.length} categories.
+              Skill support across all 46 agents and {CATEGORIES.length} categories.
             </p>
           </div>
           <div className="flex items-center gap-2">

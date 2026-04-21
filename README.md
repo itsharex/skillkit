@@ -8,7 +8,7 @@
 
 <br/>
 
-### *One skill. Every agent. 45 of them.*
+### *One skill. Every agent. 46 of them.*
 
 <br/>
 
@@ -20,14 +20,14 @@
 
 
 <a href="https://skillkit.sh"><img src="assets/tags/skills.svg" alt="400K+ skills"></a>
-<a href="#supported-agents"><img src="assets/tags/agents.svg" alt="45 agents"></a>
+<a href="#supported-agents"><img src="assets/tags/agents.svg" alt="46 agents"></a>
 <a href="#skill-sources"><img src="assets/tags/sources.svg" alt="31 sources"></a>
 <img src="assets/tags/tests.svg" alt="757 tests">
 <a href="LICENSE"><img src="assets/tags/license.svg" alt="Apache 2.0"></a>
 <a href="CONTRIBUTING.md"><img src="assets/tags/prs-welcome.svg" alt="PRs welcome"></a>
 
 <a href="#full-vs-slim"><img src="assets/tags/slim-install.svg" alt="slim install"></a>
-<a href="https://github.com/rohitg00/skillkit/releases/latest"><img src="assets/tags/v1.23.0.svg" alt="v1.23.0"></a>
+<a href="https://github.com/rohitg00/skillkit/releases/latest"><img src="assets/tags/v1.24.0.svg" alt="v1.24.0"></a>
 <img src="assets/tags/new.svg" alt="new">
 <img src="assets/tags/one-skill.svg" alt="one skill">
 <img src="assets/tags/every-agent.svg" alt="every agent">
@@ -67,7 +67,7 @@ You rewrite the same skill for each agent. Or you lock in to one.
 
 ## The fix
 
-SkillKit is the package manager for AI agent skills. Install from 400K+ skills across 31 sources. Auto-translate between formats. Persist session learnings. Ship to 45 agents at once.
+SkillKit is the package manager for AI agent skills. Install from 400K+ skills across 31 sources. Auto-translate between formats. Persist session learnings. Ship to 46 agents at once.
 
 ```bash
 npx skillkit add anthropics/skills

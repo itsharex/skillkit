@@ -69,8 +69,8 @@ const ADVANCED_FEATURES: AdvancedFeature[] = [
     id: 'primer',
     title: 'Primer',
     subtitle: 'Zero-Config AI Instructions',
-    description: 'Automatically generate CLAUDE.md, .cursorrules, and agent instructions by analyzing your codebase. Detects your tech stack, coding patterns, and project structure—then creates optimized instructions for all 45 agents.',
-    highlight: 'Auto-generates instructions for 45 agents',
+    description: 'Automatically generate CLAUDE.md, .cursorrules, and agent instructions by analyzing your codebase. Detects your tech stack, coding patterns, and project structure—then creates optimized instructions for all 46 agents.',
+    highlight: 'Auto-generates instructions for 46 agents',
     icon: (
       <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
@@ -78,7 +78,7 @@ const ADVANCED_FEATURES: AdvancedFeature[] = [
     ),
     commands: [
       { cmd: 'primer', desc: 'Analyze & generate for detected agents' },
-      { cmd: 'primer --all-agents', desc: 'Generate for all 45 agents' },
+      { cmd: 'primer --all-agents', desc: 'Generate for all 46 agents' },
       { cmd: 'primer --analyze-only', desc: 'Preview codebase analysis' },
       { cmd: 'primer --json', desc: 'Machine-readable output' },
     ],

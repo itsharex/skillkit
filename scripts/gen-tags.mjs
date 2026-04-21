@@ -46,7 +46,7 @@ function splitPill({ label, value, labelBg = '#18181b', valueBg = '#09090b', lab
 const tags = [
   { name: 'slim-install.svg', svg: pill({ text: 'slim install', accent: '#3b82f6' }) },
   { name: 'new.svg',          svg: pill({ text: 'new',          accent: '#22c55e' }) },
-  { name: 'v1.23.0.svg',      svg: pill({ text: 'v1.23.0',      accent: '#3b82f6' }) },
+  { name: 'v1.24.0.svg',      svg: pill({ text: 'v1.24.0',      accent: '#3b82f6' }) },
   { name: 'official.svg',     svg: pill({ text: 'official',     accent: '#f59e0b' }) },
   { name: 'community.svg',    svg: pill({ text: 'community',    accent: '#a78bfa' }) },
   { name: 'curated.svg',      svg: pill({ text: 'curated',      accent: '#06b6d4' }) },
@@ -55,7 +55,7 @@ const tags = [
   { name: 'one-skill.svg',    svg: pill({ text: 'one skill',    accent: '#3b82f6' }) },
   { name: 'every-agent.svg',  svg: pill({ text: 'every agent',  accent: '#3b82f6' }) },
 
-  { name: 'agents.svg',       svg: splitPill({ label: 'agents',   value: '45'     }) },
+  { name: 'agents.svg',       svg: splitPill({ label: 'agents',   value: '46'     }) },
   { name: 'skills.svg',       svg: splitPill({ label: 'skills',   value: '400K+'  }) },
   { name: 'sources.svg',      svg: splitPill({ label: 'sources',  value: '31'     }) },
   { name: 'tests.svg',        svg: splitPill({ label: 'tests',    value: '757'    }) },

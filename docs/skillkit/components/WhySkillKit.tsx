@@ -18,7 +18,7 @@ const COMPETITORS: Competitor[] = [
   { name: 'Askill', type: 'Installer', agents: '~40', translate: false, memory: false, security: true, team: false, tui: false, api: false },
   { name: 'Skild', type: 'Installer', agents: '~7', translate: false, memory: false, security: false, team: false, tui: false, api: false },
   { name: 'Paks', type: 'Installer', agents: '~6', translate: false, memory: false, security: false, team: false, tui: false, api: false },
-  { name: 'SkillKit', type: 'Platform', agents: '45', translate: true, memory: true, security: true, team: true, tui: true, api: true },
+  { name: 'SkillKit', type: 'Platform', agents: '46', translate: true, memory: true, security: true, team: true, tui: true, api: true },
 ];
 
 const SOURCES = [

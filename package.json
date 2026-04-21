@@ -1,8 +1,8 @@
 {
   "name": "skillkit-monorepo",
-  "version": "1.23.0",
+  "version": "1.24.0",
   "private": true,
-  "description": "The package manager for AI agent skills — install, translate, share across 45 coding agents",
+  "description": "The package manager for AI agent skills — install, translate, share across 46 coding agents",
   "type": "module",
   "scripts": {
     "build": "turbo run build",

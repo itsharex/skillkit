@@ -22,7 +22,7 @@ interface TerminalLine {
 const TERMINAL_LINES: TerminalLine[] = [
   { type: 'cmd', text: 'skillkit install anthropics/skills' },
   { type: 'out', text: '→ Fetched from github.com/anthropics/skills' },
-  { type: 'out', text: '→ Translated to 45 agent formats' },
+  { type: 'out', text: '→ Translated to 46 agent formats' },
   { type: 'out', text: '→ Scanned: 0 issues found' },
   { type: 'cmd', text: 'skillkit install skills.sh/vercel/agent-skills' },
   { type: 'out', text: '→ Installed 12 skills from skills.sh' },
@@ -149,7 +149,7 @@ export function Hero({ version, stars }: HeroProps): React.ReactElement {
 
             <p className="text-sm text-zinc-400 mb-5 max-w-lg font-mono leading-relaxed">
               The open source package manager that aggregates 34+ skill sources,
-              scans 400K+ skills from registries, auto-translates to 45 agent formats,
+              scans 400K+ skills from registries, auto-translates to 46 agent formats,
               and adds memory, security scanning, and team workflows. Everything runs locally.
             </p>
 

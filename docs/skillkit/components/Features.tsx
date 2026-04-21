@@ -36,7 +36,7 @@ const FEATURES: Feature[] = [
   },
   {
     title: 'Primer',
-    description: 'Auto-generate agent instructions for all 45 agents from your codebase.',
+    description: 'Auto-generate agent instructions for all 46 agents from your codebase.',
     icon: (
       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -109,7 +109,7 @@ const FEATURES: Feature[] = [
 ];
 
 const COMPARISONS = [
-  ['Agent Support', '1-17 agents', '45 agents'],
+  ['Agent Support', '1-17 agents', '46 agents'],
   ['Sources', 'Single registry', '34+ aggregated'],
   ['Translation', 'None or limited', 'All 45 formats'],
   ['Memory', 'None', 'Persistent learning'],

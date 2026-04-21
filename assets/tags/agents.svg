@@ -5,6 +5,6 @@
     <rect x="56" width="28" height="28" fill="#09090b"/>
     <rect x="0.5" y="0.5" width="83" height="27" fill="none" stroke="#3f3f46" rx="4" ry="4"/>
     <text x="28" y="18" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#a1a1aa" letter-spacing="0.3">agents</text>
-    <text x="70" y="18" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12" font-weight="700" fill="#fafafa" letter-spacing="0.3">45</text>
+    <text x="70" y="18" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12" font-weight="700" fill="#fafafa" letter-spacing="0.3">46</text>
   </g>
 </svg>

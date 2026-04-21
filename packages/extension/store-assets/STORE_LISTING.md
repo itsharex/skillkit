@@ -4,10 +4,10 @@
 SkillKit - Save as Skill
 
 ## Summary (132 chars max)
-Save any webpage as an AI agent skill file. One click, works across 45 coding agents.
+Save any webpage as an AI agent skill file. One click, works across 46 coding agents.
 
 ## Description
-SkillKit lets you save any webpage as a reusable AI agent skill with one click. The extension extracts page content directly in your browser and generates a SKILL.md file that works instantly across 45 coding agents including Claude Code, Cursor, Codex, Gemini CLI, Windsurf, and more.
+SkillKit lets you save any webpage as a reusable AI agent skill with one click. The extension extracts page content directly in your browser and generates a SKILL.md file that works instantly across 46 coding agents including Claude Code, Cursor, Codex, Gemini CLI, Windsurf, and more.
 
 How it works:
 - Click the extension icon to save the current page as a skill
